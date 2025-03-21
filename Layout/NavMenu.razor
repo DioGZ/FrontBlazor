@@ -1,0 +1,86 @@
+﻿<!-- Contenedor superior del menú de navegación -->
+<!-- top-row: define altura y posición, ps-3: padding izquierdo, navbar navbar-dark: estilos de Bootstrap para la barra de navegación oscura -->
+<div class="top-row ps-3 navbar navbar-dark">
+    <!-- container-fluid: contenedor que ocupa todo el ancho disponible (Bootstrap) -->
+    <div class="container-fluid">
+        <!-- navbar-brand: estilo para el logo/nombre de la aplicación -->
+        <!-- href="": enlace a la página de inicio -->
+        <a class="navbar-brand" href="">FrontBlazor</a>
+        
+        <!-- Botón hamburguesa para mostrar/ocultar el menú en dispositivos móviles -->
+        <!-- title: texto que aparece al pasar el cursor sobre el botón -->
+        <!-- navbar-toggler: estilo Bootstrap para el botón de alternar menú -->
+        <!-- @onclick: evento que llama al método ToggleNavMenu cuando se hace clic -->
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <!-- Icono de tres líneas horizontales (hamburguesa) -->
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<!-- Contenedor principal del menú de navegación -->
+<!-- @NavMenuCssClass: clase dinámica que controla si el menú está colapsado o no -->
+<!-- nav-scrollable: permite desplazamiento si el menú es muy largo -->
+<!-- @onclick: colapsa el menú al hacer clic en cualquier opción (en dispositivos móviles) -->
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <!-- Elemento de navegación con disposición en columna vertical -->
+    <nav class="flex-column">
+        <!-- Primera opción de menú: Home -->
+        <!-- nav-item: estilo para elemento de navegación, px-3: padding horizontal -->
+        <div class="nav-item px-3">
+            <!-- NavLink: componente especial de Blazor para navegación que resalta automáticamente la página actual -->
+            <!-- href="": enlace a la ruta raíz -->
+            <!-- Match="NavLinkMatch.All": solo se activa cuando la ruta es exactamente "/" -->
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <!-- Icono para la opción Home -->
+                <!-- bi bi-house-door-fill-nav-menu: clases para el icono de casa -->
+                <!-- aria-hidden="true": oculta el icono para lectores de pantalla -->
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        
+        <!-- Segunda opción de menú: Counter -->
+        <div class="nav-item px-3">
+            <!-- href="counter": enlace a la página de contador -->
+            <NavLink class="nav-link" href="counter">
+                <!-- Icono para la opción Counter (símbolo de más en un cuadrado) -->
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+        
+        <!-- Tercera opción de menú: Weather -->
+        <div class="nav-item px-3">
+            <!-- href="weather": enlace a la página del clima -->
+            <NavLink class="nav-link" href="weather">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            </NavLink>
+        </div>
+
+<!-- Agregar este bloque después de las opciones existentes -->
+<div class="nav-item px-3">
+    <NavLink class="nav-link" href="productos">
+        <span class="oi oi-box" aria-hidden="true"></span> Productos
+    </NavLink>
+</div>
+
+    </nav>
+</div>
+
+<!-- Bloque de código C# que define la lógica del componente -->
+@code {
+    // Variable que controla si el menú está colapsado (valor inicial: true)
+    private bool collapseNavMenu = true;
+
+    // Propiedad que devuelve la clase CSS según el estado del menú
+    // Si está colapsado, devuelve "collapse", de lo contrario, null
+    // El signo ? indica que puede devolver null (string nullable)
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    // Método que invierte el estado del menú (colapsado/expandido)
+    // Se ejecuta cuando se hace clic en el botón hamburguesa
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

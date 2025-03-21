@@ -1,0 +1,218 @@
+@page "/roles"
+
+@using System.Collections.Generic
+@using System.Text.Json
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+@inject NavigationManager navegacionManager
+
+<PageTitle>Lista de Roles</PageTitle>
+
+<h1>Roles</h1>
+
+<!-- Botón para crear un nuevo rol -->
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
+</div>
+
+<!-- Formulario para crear un nuevo rol -->
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nuevo Rol</h5>
+            <form>
+                <div class="form-group">
+                    <label for="nombre">Nombre</label>
+                    <input type="text" class="form-control" @bind="nuevoRolNombre" />
+                </div>
+                <button type="button" class="btn btn-success" @onclick="GuardarRol">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- Tabla para mostrar la lista de roles -->
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (roles == null || roles.Count == 0)
+{
+    <p>No hay roles disponibles.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var rol in roles)
+                {
+                    <tr>
+                        <td>@ObtenerValor(rol, "id")</td>
+                        <td>@ObtenerValor(rol, "nombre")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => EditarRol(rol)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRol(rol)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Mostrar mensaje de error si existe -->
+@if (errorMensaje != null)
+{
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
+}
+
+@code {
+    // Lista para almacenar los roles
+    private List<Dictionary<string, object>> roles = new List<Dictionary<string, object>>();
+    
+    // Bandera para indicar si se están cargando los datos
+    private bool cargando = true;
+    
+    // Variable para almacenar mensajes de error
+    private string? errorMensaje = null;
+    
+    // Constantes para los parámetros de la API
+    private const string PROYECTO = "indicadores";
+    private const string TABLA = "rol";
+    
+    // Variables para el formulario de creación
+    private bool mostrarFormularioCrear = false;
+    private string nuevoRolNombre = string.Empty;
+
+    // Método que se ejecuta cuando se inicializa el componente
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarRoles();
+    }
+
+    // Método para cargar los roles desde la API
+    private async Task CargarRoles()
+    {
+        cargando = true;
+        errorMensaje = null;
+        
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
+            roles = resultado ?? new List<Dictionary<string, object>>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar roles: {ex.Message}";
+            roles = new List<Dictionary<string, object>>();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    // Método para mostrar el formulario de creación
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+    }
+
+    // Método para cancelar la creación de un rol
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+        nuevoRolNombre = string.Empty;
+    }
+
+    // Método para guardar un nuevo rol
+    private async Task GuardarRol()
+    {
+        try
+        {
+            var nuevoRol = new Dictionary<string, object>
+            {
+                { "nombre", nuevoRolNombre }
+            };
+
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoRol);
+            await CargarRoles();  // Recargar la lista de roles
+            mostrarFormularioCrear = false;
+            nuevoRolNombre = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al crear el rol: {ex.Message}";
+        }
+    }
+
+    // Método para editar un rol
+    private async Task EditarRol(Dictionary<string, object> rol)
+    {
+        try
+        {
+            if (rol.ContainsKey("id") && rol["id"] != null)
+            {
+                string id = rol["id"].ToString()!;
+                var datosActualizados = new Dictionary<string, object>
+                {
+                    { "nombre", rol["nombre"] }
+                };
+
+                await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", id, datosActualizados);
+                await CargarRoles();  // Recargar la lista de roles
+            }
+            else
+            {
+                errorMensaje = "El rol no tiene un ID válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al editar el rol: {ex.Message}";
+        }
+    }
+
+    // Método para eliminar un rol
+    private async Task EliminarRol(Dictionary<string, object> rol)
+    {
+        try
+        {
+            if (rol.ContainsKey("id") && rol["id"] != null)
+            {
+                string id = rol["id"].ToString()!;
+                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
+                await CargarRoles();  // Recargar la lista de roles
+            }
+            else
+            {
+                errorMensaje = "El rol no tiene un ID válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al eliminar el rol: {ex.Message}";
+        }
+    }
+
+    // Método auxiliar para obtener valores de un diccionario
+    private string ObtenerValor(Dictionary<string, object> diccionario, string clave)
+    {
+        if (diccionario == null || !diccionario.ContainsKey(clave))
+            return string.Empty;
+        return diccionario[clave]?.ToString() ?? string.Empty;
+    }
+}

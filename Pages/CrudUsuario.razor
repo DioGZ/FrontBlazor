@@ -1,0 +1,229 @@
+@page "/usuarios"
+
+@using System.Collections.Generic
+@using System.Text.Json
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+@inject NavigationManager navegacionManager
+
+<PageTitle>Lista de Usuarios</PageTitle>
+
+<h1>Usuarios</h1>
+
+<!-- Botón para crear un nuevo usuario -->
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
+</div>
+
+<!-- Formulario para crear un nuevo usuario -->
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nuevo Usuario</h5>
+            <form>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" class="form-control" @bind="email" />
+                </div>
+                <div class="form-group">
+                    <label for="contraseña">Contraseña</label>
+                    <input type="password" class="form-control" @bind="contraseña" />
+                </div>
+                <button type="button" class="btn btn-success" @onclick="GuardarUsuario">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- Tabla para mostrar la lista de usuarios -->
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (usuarios == null || usuarios.Count == 0)
+{
+    <p>No hay usuarios disponibles.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Contraseña</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var usuario in usuarios)
+                {
+                    <tr>
+                        <td>@ObtenerValor(usuario, "email")</td>
+                        <td>@ObtenerValor(usuario, "contraseña")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => EditarUsuario(usuario)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarUsuario(usuario)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Mostrar mensaje de error si existe -->
+@if (errorMensaje != null)
+{
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
+}
+
+@code {
+    // Lista para almacenar los usuarios
+    private List<Dictionary<string, object>> usuarios = new List<Dictionary<string, object>>();
+    
+    // Bandera para indicar si se están cargando los datos
+    private bool cargando = true;
+    
+    // Variable para almacenar mensajes de error
+    private string? errorMensaje = null;
+    
+    // Constantes para los parámetros de la API
+    private const string PROYECTO = "indicadores";
+    private const string TABLA = "usuario";
+    
+    // Variables para el formulario de creación
+    private bool mostrarFormularioCrear = false;
+    private string email = string.Empty;
+    private string contraseña = string.Empty;
+
+    // Método que se ejecuta cuando se inicializa el componente
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarUsuarios();
+    }
+
+    // Método para cargar los usuarios desde la API
+    private async Task CargarUsuarios()
+    {
+        cargando = true;
+        errorMensaje = null;
+        
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
+            usuarios = resultado ?? new List<Dictionary<string, object>>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar usuarios: {ex.Message}";
+            usuarios = new List<Dictionary<string, object>>();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    // Método para mostrar el formulario de creación
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+    }
+
+    // Método para cancelar la creación de un usuario
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+        email = string.Empty;
+        contraseña = string.Empty;
+    }
+
+    // Método para guardar un nuevo usuario
+    private async Task GuardarUsuario()
+    {
+        try
+        {
+            var nuevoUsuario = new Dictionary<string, object>
+            {
+                { "email", email },
+                { "contraseña", contraseña }
+            };
+
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoUsuario);
+            await CargarUsuarios();  // Recargar la lista de usuarios
+            mostrarFormularioCrear = false;
+            email = string.Empty;
+            contraseña = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al crear el usuario: {ex.Message}";
+        }
+    }
+
+    // Método para editar un usuario
+    private async Task EditarUsuario(Dictionary<string, object> usuario)
+    {
+        try
+        {
+            // Verifica si el diccionario contiene la clave "id"
+            if (usuario.ContainsKey("id") && usuario["id"] != null)
+            {
+                // Convierte el ID a string (si es necesario)
+                string id = usuario["id"].ToString()!;
+
+                // Llama al método ActualizarAsync del servicio
+                await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", id, usuario);
+                await CargarUsuarios();  // Recargar la lista de usuarios
+            }
+            else
+            {
+                errorMensaje = "El usuario no tiene un ID válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al editar el usuario: {ex.Message}";
+        }
+    }
+
+    // Método para eliminar un usuario
+    private async Task EliminarUsuario(Dictionary<string, object> usuario)
+    {
+        try
+        {
+            // Verifica si el diccionario contiene la clave "id"
+            if (usuario.ContainsKey("id") && usuario["id"] != null)
+            {
+                // Convierte el ID a string (si es necesario)
+                string id = usuario["id"].ToString()!;
+
+                // Llama al método EliminarAsync del servicio
+                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
+                await CargarUsuarios();  // Recargar la lista de usuarios
+            }
+            else
+            {
+                errorMensaje = "El usuario no tiene un ID válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al eliminar el usuario: {ex.Message}";
+        }
+    }
+    
+    // Método auxiliar para obtener valores de un diccionario
+    private string ObtenerValor(Dictionary<string, object> diccionario, string clave)
+    {
+        if (diccionario == null || !diccionario.ContainsKey(clave))
+            return string.Empty;
+        return diccionario[clave]?.ToString() ?? string.Empty;
+    }
+}
