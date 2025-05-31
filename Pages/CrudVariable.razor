@@ -1,0 +1,301 @@
+@page "/variable"
+@attribute [Authorize]
+
+
+@using System.Collections.Generic
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+
+<PageTitle>Gestión de Variables</PageTitle>
+
+<h1>Gestión de Variables</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nueva Variable</button>
+</div>
+
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nueva Variable</h5>
+            <form>
+                <div class="form-group">
+                    <label for="fkemailusuario">Email Usuario</label>
+                    <select class="form-control" @bind="nuevoFkEmailUsuario">
+                        @foreach (var usuario in usuarios)
+                        {
+                            <option value="@usuario.Id">@usuario.Nombre</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="nombre">Nombre</label>
+                    <input type="text" class="form-control" @bind="nuevoNombre" />
+                </div>
+
+                <div class="form-group">
+                    <label for="fechacreacion">Fecha de Creación</label>
+                    <input type="date" class="form-control" @bind="nuevaFechaCreacion" />
+                </div>
+
+                <button type="button" class="btn btn-success" @onclick="Guardar">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (items == null || items.Count == 0)
+{
+    <p>No hay registros disponibles.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email Usuario</th>
+                    <th>Nombre</th>
+                    <th>Fecha de Creación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in items)
+                {
+                    <tr>
+                        <td>@ObtenerValor(item, "id")</td>
+                        <td>@ObtenerValor(item, "fkemailusuario")</td>
+                        <td>@ObtenerValor(item, "nombre")</td>
+                        <td>@ObtenerValor(item, "fechacreacion")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => Editar(item)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarModalEditar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Variable</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editarId">ID</label>
+                        <input type="text" class="form-control" @bind="editandoId" readonly />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fkemailusuario">Email Usuario</label>
+                        <select class="form-control" @bind="editandoFkEmailUsuario">
+                            @foreach (var usuario in usuarios)
+                            {
+                                <option value="@usuario.Id">@usuario.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nombre">Nombre</label>
+                        <input type="text" class="form-control" @bind="editandoNombre" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fechacreacion">Fecha de Creación</label>
+                        <input type="date" class="form-control" @bind="editandoFechaCreacion" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @onclick="GuardarEdicion">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (errorMensaje != null)
+{
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
+}
+@code {
+    private List<Dictionary<string, object>> items = new();
+    private List<Opcion> usuarios = new();
+
+    private bool cargando = true;
+    private string? errorMensaje = null;
+
+    private bool mostrarFormularioCrear = false;
+
+    private string nuevoFkEmailUsuario = string.Empty;
+    private string nuevoNombre = string.Empty;
+    private DateTime nuevaFechaCreacion = DateTime.Now;
+
+    private bool mostrarModalEditar = false;
+
+    private string editandoId = string.Empty;
+    private string editandoFkEmailUsuario = string.Empty;
+    private string editandoNombre = string.Empty;
+    private DateTime editandoFechaCreacion = DateTime.Now;
+
+    private const string PROYECTO = "indicadores";
+    private const string TABLA = "variable";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+        usuarios = await CargarOpciones("usuario");
+    }
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
+            items = resultado ?? new List<Dictionary<string, object>>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task<List<Opcion>> CargarOpciones(string tabla)
+    {
+        var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, tabla);
+        return resultado?.Select(d => new Opcion
+        {
+            Id = d["email"].ToString()!,
+            Nombre = d.ContainsKey("email") ? d["email"].ToString()! : "Sin Email"
+        }).ToList() ?? new List<Opcion>();
+    }
+
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+        nuevoFkEmailUsuario = usuarios.FirstOrDefault()?.Id ?? string.Empty;
+        nuevoNombre = string.Empty;
+        nuevaFechaCreacion = DateTime.Now;
+    }
+
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            var nuevoItem = new Dictionary<string, object>
+            {
+                { "fkemailusuario", nuevoFkEmailUsuario },
+                { "nombre", nuevoNombre },
+                { "fechacreacion", nuevaFechaCreacion.ToString("yyyy-MM-dd") }
+            };
+
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoItem);
+            await Cargar();
+            mostrarFormularioCrear = false;
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al crear: {ex.Message}";
+        }
+    }
+
+    private void Editar(Dictionary<string, object> item)
+    {
+        editandoId = ObtenerValor(item, "id");
+        editandoFkEmailUsuario = ObtenerValor(item, "fkemailusuario");
+        editandoNombre = ObtenerValor(item, "nombre");
+        editandoFechaCreacion = DateTime.TryParse(ObtenerValor(item, "fechacreacion"), out var fecha) ? fecha : DateTime.Now;
+        mostrarModalEditar = true;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        try
+        {
+            var datosActualizados = new Dictionary<string, object>
+            {
+                { "fkemailusuario", editandoFkEmailUsuario },
+                { "nombre", editandoNombre },
+                { "fechacreacion", editandoFechaCreacion.ToString("yyyy-MM-dd") }
+            };
+
+            await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", editandoId, datosActualizados);
+            mostrarModalEditar = false;
+            await Cargar();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al guardar cambios: {ex.Message}";
+        }
+    }
+
+    private async Task Eliminar(Dictionary<string, object> item)
+    {
+        try
+        {
+            if (item.ContainsKey("id") && item["id"] != null)
+            {
+                string id = item["id"].ToString()!;
+                if (string.IsNullOrEmpty(id) || id == "0")
+                {
+                    errorMensaje = "ID inválido para eliminar.";
+                    return;
+                }
+                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
+                await Cargar();
+            }
+            else
+            {
+                errorMensaje = "El ID del elemento no es válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al eliminar: {ex.Message}";
+        }
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+    }
+
+    private string ObtenerValor(Dictionary<string, object> diccionario, string clave)
+        => diccionario.TryGetValue(clave, out var valor) ? valor?.ToString() ?? string.Empty : string.Empty;
+
+    public class Opcion
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+    }
+}

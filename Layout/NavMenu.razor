@@ -1,5 +1,10 @@
-﻿<!-- Contenedor superior del menú de navegación -->
-<!-- top-row: define altura y posición, ps-3: padding izquierdo, navbar navbar-dark: estilos de Bootstrap para la barra de navegación oscura -->
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject AuthService AuthService
+
+<!-- Contenedor superior del menú de navegación -->
+<!-- top-row: define altura y posición, ps-3: padding izquierdo, navbar navbar-dark: estilos de Bootstrap para la barra de navegación -->
 <div class="top-row ps-3 navbar navbar-dark">
     <!-- container-fluid: contenedor que ocupa todo el ancho disponible (Bootstrap) -->
     <div class="container-fluid">
@@ -57,6 +62,132 @@
             </NavLink>
         </div>
 
+        <!-- cuarta opción de menú: actor -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="actor">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> actor
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="articulo">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> articulo
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="fuentesporindicador">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> fuentes por indicador
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="indicador">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> indicador
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="literal">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> literal
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="numeral">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> numeral
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="paragrafo">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> parrafo
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="represenvisualporindicador">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> representacion visual por indicador
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="responsablesporindicador">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> responsable por indicador
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="resultadoindicador">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> resultado por indicador
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="rolusuario">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Rol de usuario
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: tipoactor -->
+        <div class="nav-item px-3">
+            <!-- href="tipoactor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="tipoactor">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> tipoactor
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="variable">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> variable
+            </NavLink>
+        </div>
+
+        <!-- cuarta opción de menú: articulo -->
+        <div class="nav-item px-3">
+            <!-- href="actor": enlace a la página del clima -->
+            <NavLink class="nav-link" href="variablesporindicador">
+                <!-- Icono para la opción Weather (lista anidada) -->
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> variables por indicador
+            </NavLink>
+        </div>
+
 <!-- Agregar este bloque después de las opciones existentes -->
 <div class="nav-item px-3">
     <NavLink class="nav-link" href="productos">
@@ -64,6 +195,35 @@
     </NavLink>
 </div>
 
+        <!-- Opciones de menú para usuario autenticado -->
+        <AuthorizeView>
+            <Authorized>
+                <!-- Aquí puedes agregar más opciones específicas para usuarios autenticados -->
+
+                <!-- Opción de menú: Cerrar Sesión -->
+                <div class="nav-item px-3">
+                    <!-- @onclick: evento que llama al método HandleLogout cuando se hace clic -->
+                    <!-- @onclick:preventDefault: evita el comportamiento por defecto del enlace -->
+                    <a class="nav-link" href="#" @onclick="HandleLogout" @onclick:preventDefault>
+                        <!-- Icono para la opción Cerrar Sesión -->
+                        <!-- oi oi-account-logout: clases para el icono de cerrar sesión -->
+                        <!-- aria-hidden="true": oculta el icono para lectores de pantalla -->
+                        <span class="oi oi-account-logout" aria-hidden="true"></span> Cerrar Sesión
+                    </a>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <!-- Opción de menú: Iniciar Sesión (para usuarios no autenticados) -->
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <!-- Icono para la opción Iniciar Sesión -->
+                        <!-- oi oi-account-login: clases para el icono de iniciar sesión -->
+                        <!-- aria-hidden="true": oculta el icono para lectores de pantalla -->
+                        <span class="oi oi-account-login" aria-hidden="true"></span> Iniciar Sesión
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 
@@ -82,5 +242,16 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    // Método que maneja el cierre de sesión
+    // Se ejecuta cuando se hace clic en el enlace "Cerrar Sesión"
+    private async Task HandleLogout()
+    {
+        // Llama al servicio de autenticación para cerrar sesión
+        await AuthService.Logout();
+        
+        // Redirige a la página de inicio de sesión
+        NavigationManager.NavigateTo("/login");
     }
 }

@@ -2,6 +2,7 @@
 <!-- LayoutComponentBase es la clase base para todos los componentes de diseño en Blazor -->
 <!-- Proporciona la propiedad Body para insertar el contenido de la página actual -->
 @inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
 
 <!-- Contenedor principal que envuelve toda la página -->
 <div class="page">
@@ -16,6 +17,11 @@
     <main>
         <!-- Barra superior con padding horizontal (px-4) -->
         <div class="top-row px-4">
+            <AuthorizeView>
+                <Authorized>
+                    <span class="me-3">Bienvenido, @context.User.Identity?.Name!</span>
+                </Authorized>
+            </AuthorizeView>
             <!-- Enlace "About" que abre la documentación oficial de ASP.NET Core en una nueva pestaña -->
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>

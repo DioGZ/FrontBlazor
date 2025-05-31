@@ -1,49 +1,48 @@
-@page "/roles"
+@page "/unidadmedicion"
 @attribute [Authorize]
 
 
 @using System.Collections.Generic
-@using System.Text.Json
 @using FrontBlazor.Services
 
 @inject ServicioEntidad servicioEntidad
 @inject NavigationManager navegacionManager
 
-<PageTitle>Lista de Roles</PageTitle>
+<PageTitle>Unidades de Medicion</PageTitle>
 
-<h1>Roles</h1>
+<h1>Unidades de Medicion</h1>
 
-<!-- Botón para crear un nuevo rol -->
+<!-- Botón para crear nueva unidad -->
 <div class="mb-3">
-    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nueva</button>
 </div>
 
-<!-- Formulario para crear un nuevo rol -->
+<!-- Formulario para crear una nueva unidad -->
 @if (mostrarFormularioCrear)
 {
     <div class="card mb-3">
         <div class="card-body">
-            <h5 class="card-title">Nuevo Rol</h5>
+            <h5 class="card-title">Nueva Unidad de Medicion</h5>
             <form>
                 <div class="form-group">
-                    <label for="nombre">Nombre</label>
-                    <input type="text" class="form-control" @bind="nuevoRolNombre" />
+                    <label for="descripcion">Descripción</label>
+                    <input type="text" class="form-control" @bind="nuevaDescripcion" />
                 </div>
-                <button type="button" class="btn btn-success" @onclick="GuardarRol">Guardar</button>
+                <button type="button" class="btn btn-success" @onclick="GuardarUnidad">Guardar</button>
                 <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
             </form>
         </div>
     </div>
 }
 
-<!-- Tabla para mostrar la lista de roles -->
+<!-- Tabla con unidades existentes -->
 @if (cargando)
 {
     <p><em>Cargando...</em></p>
 }
-else if (roles == null || roles.Count == 0)
+else if (unidades == null || unidades.Count == 0)
 {
-    <p>No hay roles disponibles.</p>
+    <p>No hay unidades de medicion disponibles.</p>
 }
 else
 {
@@ -52,19 +51,19 @@ else
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Nombre</th>
+                    <th>Descripción</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var rol in roles)
+                @foreach (var unidad in unidades)
                 {
                     <tr>
-                        <td>@ObtenerValor(rol, "id")</td>
-                        <td>@ObtenerValor(rol, "nombre")</td>
+                        <td>@ObtenerValor(unidad, "id")</td>
+                        <td>@ObtenerValor(unidad, "descripcion")</td>
                         <td>
-                            <button class="btn btn-warning btn-sm" @onclick="() => EditarRol(rol)">Editar</button>
-                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRol(rol)">Eliminar</button>
+                            <button class="btn btn-warning btn-sm" @onclick="() => EditarUnidad(unidad)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarUnidad(unidad)">Eliminar</button>
                         </td>
                     </tr>
                 }
@@ -73,32 +72,32 @@ else
     </div>
 }
 
-<!-- Modal para edición -->
+<!-- Modal de edición -->
 @if (mostrarModalEditar)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Editar Rol</h5>
+                    <h5 class="modal-title">Editar Unidad de Medicion</h5>
                     <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="editarNombre">Nombre</label>
-                        <input type="text" class="form-control" @bind="rolEditandoNombre" />
+                        <label for="editarDescripcion">Descripción</label>
+                        <input type="text" class="form-control" @bind="unidadEditandoDescripcion" />
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
-                    <button class="btn btn-primary" @onclick="GuardarEdicionRol">Guardar cambios</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicionUnidad">Guardar cambios</button>
                 </div>
             </div>
         </div>
     </div>
 }
 
-<!-- Mostrar mensaje de error si existe -->
+<!-- Mensaje de error -->
 @if (errorMensaje != null)
 {
     <div class="alert alert-danger">
@@ -107,26 +106,26 @@ else
 }
 
 @code {
-    private List<Dictionary<string, object>> roles = new();
+    private List<Dictionary<string, object>> unidades = new();
     private bool cargando = true;
     private string? errorMensaje = null;
 
     private const string PROYECTO = "indicadores";
-    private const string TABLA = "rol";
+    private const string TABLA = "unidadmedicion";
 
     private bool mostrarFormularioCrear = false;
-    private string nuevoRolNombre = string.Empty;
+    private string nuevaDescripcion = string.Empty;
 
     private bool mostrarModalEditar = false;
-    private Dictionary<string, object> rolEditando = new();
-    private string rolEditandoNombre = string.Empty;
+    private Dictionary<string, object> unidadEditando = new();
+    private string unidadEditandoDescripcion = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarRoles();
+        await CargarUnidades();
     }
 
-    private async Task CargarRoles()
+    private async Task CargarUnidades()
     {
         cargando = true;
         errorMensaje = null;
@@ -134,12 +133,12 @@ else
         try
         {
             var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
-            roles = resultado ?? new List<Dictionary<string, object>>();
+            unidades = resultado ?? new List<Dictionary<string, object>>();
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al cargar roles: {ex.Message}";
-            roles = new List<Dictionary<string, object>>();
+            errorMensaje = $"Error al cargar unidades: {ex.Message}";
+            unidades = new List<Dictionary<string, object>>();
         }
         finally
         {
@@ -155,55 +154,55 @@ else
     private void CancelarCreacion()
     {
         mostrarFormularioCrear = false;
-        nuevoRolNombre = string.Empty;
+        nuevaDescripcion = string.Empty;
     }
 
-    private async Task GuardarRol()
+    private async Task GuardarUnidad()
     {
         try
         {
-            var nuevoRol = new Dictionary<string, object>
+            var nuevaUnidad = new Dictionary<string, object>
             {
-                { "nombre", nuevoRolNombre }
+                { "descripcion", nuevaDescripcion }
             };
 
-            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoRol);
-            await CargarRoles();
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevaUnidad);
+            await CargarUnidades();
             mostrarFormularioCrear = false;
-            nuevoRolNombre = string.Empty;
+            nuevaDescripcion = string.Empty;
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al crear el rol: {ex.Message}";
+            errorMensaje = $"Error al crear la unidad: {ex.Message}";
         }
     }
 
-    private void EditarRol(Dictionary<string, object> rol)
+    private void EditarUnidad(Dictionary<string, object> unidad)
     {
-        rolEditando = new Dictionary<string, object>(rol);
-        rolEditandoNombre = ObtenerValor(rol, "nombre");
+        unidadEditando = new Dictionary<string, object>(unidad);
+        unidadEditandoDescripcion = ObtenerValor(unidad, "descripcion");
         mostrarModalEditar = true;
     }
 
-    private async Task GuardarEdicionRol()
+    private async Task GuardarEdicionUnidad()
     {
         try
         {
-            if (rolEditando.ContainsKey("id") && rolEditando["id"] != null)
+            if (unidadEditando.ContainsKey("id") && unidadEditando["id"] != null)
             {
-                string id = rolEditando["id"].ToString()!;
+                string id = unidadEditando["id"].ToString()!;
                 var datosActualizados = new Dictionary<string, object>
                 {
-                    { "nombre", rolEditandoNombre }
+                    { "descripcion", unidadEditandoDescripcion }
                 };
 
                 await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", id, datosActualizados);
                 mostrarModalEditar = false;
-                await CargarRoles();
+                await CargarUnidades();
             }
             else
             {
-                errorMensaje = "No se puede editar: el rol no tiene un ID válido.";
+                errorMensaje = "No se puede editar: la unidad no tiene un ID válido.";
             }
         }
         catch (Exception ex)
@@ -215,28 +214,28 @@ else
     private void CerrarModalEditar()
     {
         mostrarModalEditar = false;
-        rolEditando = new();
-        rolEditandoNombre = string.Empty;
+        unidadEditando = new();
+        unidadEditandoDescripcion = string.Empty;
     }
 
-    private async Task EliminarRol(Dictionary<string, object> rol)
+    private async Task EliminarUnidad(Dictionary<string, object> unidad)
     {
         try
         {
-            if (rol.ContainsKey("id") && rol["id"] != null)
+            if (unidad.ContainsKey("id") && unidad["id"] != null)
             {
-                string id = rol["id"].ToString()!;
+                string id = unidad["id"].ToString()!;
                 await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
-                await CargarRoles();
+                await CargarUnidades();
             }
             else
             {
-                errorMensaje = "El rol no tiene un ID válido.";
+                errorMensaje = "La unidad no tiene un ID válido.";
             }
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al eliminar el rol: {ex.Message}";
+            errorMensaje = $"Error al eliminar la unidad: {ex.Message}";
         }
     }
 

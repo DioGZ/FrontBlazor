@@ -1,0 +1,250 @@
+@page "/numeral"
+@attribute [Authorize]
+
+
+@using System.Collections.Generic
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+
+<PageTitle>Gestión de Numerales</PageTitle>
+
+<h1>Gestión de Numerales</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
+</div>
+
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nuevo Numeral</h5>
+            <form>
+                <div class="form-group">
+                    <label for="id">ID</label>
+                    <input type="text" class="form-control" @bind="nuevoId" />
+                </div>
+                <div class="form-group">
+                    <label for="descripcion">Descripción</label>
+                    <input type="text" class="form-control" @bind="nuevaDescripcion" />
+                </div>
+                <div class="form-group">
+                    <label for="fkidliteral">Literal</label>
+                    <select class="form-control" @bind="nuevoFkidliteral">
+                        @foreach (var opcion in literales)
+                        {
+                            <option value="@opcion.Id">@opcion.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <button class="btn btn-success" @onclick="Guardar">Guardar</button>
+                <button class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (mostrarModalEditar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Numeral</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="id">ID</label>
+                        <input type="text" class="form-control" value="@editandoId" disabled />
+                    </div>
+                    <div class="form-group">
+                        <label for="descripcion">Descripción</label>
+                        <input type="text" class="form-control" @bind="editandoDescripcion" />
+                    </div>
+                    <div class="form-group">
+                        <label for="fkidliteral">Literal</label>
+                        <select class="form-control" @bind="editandoFkidliteral">
+                            @foreach (var opcion in literales)
+                            {
+                                <option value="@opcion.Id">@opcion.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicion">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (cargando)
+{
+    <p><em>Cargando datos...</em></p>
+}
+else
+{
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Descripción</th>
+                <th>Literal</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in numerales)
+            {
+                <tr>
+                    <td>@item["id"]</td>
+                    <td>@item["descripcion"]</td>
+                    <td>@item["fkidliteral"]</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" @onclick="() => Editar(item)">Editar</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Dictionary<string, object>> numerales = new();
+    private List<Opcion> literales = new();
+
+    private bool cargando = true;
+    private bool mostrarFormularioCrear = false;
+    private bool mostrarModalEditar = false;
+
+    private string nuevoId = string.Empty;
+    private string nuevaDescripcion = string.Empty;
+    private string nuevoFkidliteral = string.Empty;
+
+    private string editandoId = string.Empty;
+    private string editandoDescripcion = string.Empty;
+    private string editandoFkidliteral = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        literales = await CargarOpciones("literal");
+        await CargarDatos();
+    }
+
+    private async Task CargarDatos()
+    {
+        cargando = true;
+
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync("indicadores", "numeral");
+            numerales = resultado ?? new List<Dictionary<string, object>>();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task<List<Opcion>> CargarOpciones(string tabla)
+    {
+        var datos = await servicioEntidad.ObtenerTodosAsync("indicadores", tabla);
+        return datos?.Select(d => new Opcion
+        {
+            Id = d["id"].ToString()!,
+            Nombre = d.ContainsKey("descripcion") ? d["descripcion"].ToString()! : d["id"].ToString()!
+        }).ToList() ?? new List<Opcion>();
+    }
+
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+        nuevoId = string.Empty;
+        nuevaDescripcion = string.Empty;
+        nuevoFkidliteral = literales.FirstOrDefault()?.Id ?? string.Empty;
+    }
+
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            var nuevoNumeral = new Dictionary<string, object>
+            {
+                { "id", nuevoId },
+                { "descripcion", nuevaDescripcion },
+                { "fkidliteral", nuevoFkidliteral }
+            };
+
+            await servicioEntidad.CrearAsync("indicadores", "numeral", nuevoNumeral);
+            await CargarDatos();
+            mostrarFormularioCrear = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al crear numeral: {ex.Message}");
+        }
+    }
+
+    private void Editar(Dictionary<string, object> item)
+    {
+        editandoId = item["id"].ToString()!;
+        editandoDescripcion = item["descripcion"].ToString()!;
+        editandoFkidliteral = item["fkidliteral"].ToString()!;
+        mostrarModalEditar = true;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        try
+        {
+            var datosActualizados = new Dictionary<string, object>
+            {
+                { "descripcion", editandoDescripcion },
+                { "fkidliteral", editandoFkidliteral }
+            };
+
+            await servicioEntidad.ActualizarAsync("indicadores", "numeral", "id", editandoId, datosActualizados);
+            await CargarDatos();
+            mostrarModalEditar = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al editar numeral: {ex.Message}");
+        }
+    }
+
+    private async Task Eliminar(Dictionary<string, object> item)
+    {
+        try
+        {
+            string id = item["id"].ToString()!;
+            await servicioEntidad.EliminarAsync("indicadores", "numeral", "id", id);
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al eliminar numeral: {ex.Message}");
+        }
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+    }
+
+    public class Opcion
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+    }
+}

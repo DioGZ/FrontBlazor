@@ -1,0 +1,328 @@
+@page "/fuentesporindicador"
+@attribute [Authorize]
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using System.Collections.Generic
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+
+<PageTitle>Fuentes por Indicador</PageTitle>
+
+<h1>Fuentes por Indicador</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nueva Fuente por Indicador</button>
+</div>
+
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nueva Fuente por Indicador</h5>
+            <form>
+                <div class="form-group">
+                    <label for="fkidfuente">Fuente</label>
+                    <select class="form-control" @bind="nuevoFkidFuente">
+                        @foreach (var fuente in fuentes)
+                        {
+                            <option value="@fuente.Id">@fuente.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fkidindicador">Indicador</label>
+                    <select class="form-control" @bind="nuevoFkidIndicador">
+                        @foreach (var indicador in indicadores)
+                        {
+                            <option value="@indicador.Id">@indicador.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <button type="button" class="btn btn-success" @onclick="Guardar">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (items == null || items.Count == 0)
+{
+    <p>No hay fuentes por indicador disponibles.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Fuente</th>
+                    <th>Indicador</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in items)
+                {
+                    <tr>
+                        <td>@ObtenerValor(item, "id")</td>
+                        <td>@ObtenerValor(item, "fkidfuente")</td>
+                        <td>@ObtenerValor(item, "fkidindicador")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => Editar(item)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarModalEditar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Fuente por Indicador</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editarFkidfuente">Fuente</label>
+                        <select class="form-control" @bind="editandoFkidFuente">
+                            @foreach (var fuente in fuentes)
+                            {
+                                <option value="@fuente.Id">@fuente.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editarFkidindicador">Indicador</label>
+                        <select class="form-control" @bind="editandoFkidIndicador">
+                            @foreach (var indicador in indicadores)
+                            {
+                                <option value="@indicador.Id">@indicador.Nombre</option>
+                            }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicion">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (errorMensaje != null)
+{
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
+}
+
+@code {
+    private List<Dictionary<string, object>> items = new();
+    private List<Fuente> fuentes = new();
+    private List<Indicador> indicadores = new();
+    private bool cargando = true;
+    private string? errorMensaje = null;
+
+    private const string PROYECTO = "indicadores";
+    private const string TABLA = "fuentesporindicador";
+    private const string TABLA_FUENTES = "fuente";
+    private const string TABLA_INDICADORES = "indicador";
+
+    private bool mostrarFormularioCrear = false;
+    private int nuevoFkidFuente = 1;
+    private int nuevoFkidIndicador = 1;
+
+    private bool mostrarModalEditar = false;
+    private int editandoId = 0;
+    private int editandoFkidFuente = 1;
+    private int editandoFkidIndicador = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+        await CargarFuentes();
+        await CargarIndicadores();
+    }
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        errorMensaje = null;
+
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
+            items = resultado ?? new List<Dictionary<string, object>>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarFuentes()
+    {
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA_FUENTES);
+            fuentes = resultado?.Select(item => new Fuente
+            {
+                Id = int.Parse(ObtenerValor(item, "id")),
+                Nombre = ObtenerValor(item, "nombre")
+            }).ToList() ?? new List<Fuente>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar fuentes: {ex.Message}";
+        }
+    }
+
+    private async Task CargarIndicadores()
+    {
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA_INDICADORES);
+            indicadores = resultado?.Select(item => new Indicador
+            {
+                Id = int.Parse(ObtenerValor(item, "id")),
+                Nombre = ObtenerValor(item, "nombre")
+            }).ToList() ?? new List<Indicador>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar indicadores: {ex.Message}";
+        }
+    }
+
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+    }
+
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+        nuevoFkidFuente = 1;
+        nuevoFkidIndicador = 1;
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            // Verificar si ya existe la combinaci�n en la base de datos
+            var existe = items.Any(item =>
+                int.Parse(ObtenerValor(item, "fkidfuente")) == nuevoFkidFuente &&
+                int.Parse(ObtenerValor(item, "fkidindicador")) == nuevoFkidIndicador);
+
+            if (existe)
+            {
+                errorMensaje = "Ya existe un registro con esta combinaci�n de Fuente e Indicador.";
+                return;
+            }
+
+            // Si no existe, crear el nuevo registro
+            var nuevoItem = new Dictionary<string, object>
+        {
+            { "fkidfuente", nuevoFkidFuente },
+            { "fkidindicador", nuevoFkidIndicador }
+        };
+
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoItem);
+            await Cargar();
+            mostrarFormularioCrear = false;
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al crear: {ex.Message}";
+        }
+    }
+
+    private void Editar(Dictionary<string, object> item)
+    {
+        editandoId = int.Parse(ObtenerValor(item, "id"));
+        editandoFkidFuente = int.Parse(ObtenerValor(item, "fkidfuente"));
+        editandoFkidIndicador = int.Parse(ObtenerValor(item, "fkidindicador"));
+        mostrarModalEditar = true;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        try
+        {
+            var datosActualizados = new Dictionary<string, object>
+            {
+                { "fkidfuente", editandoFkidFuente },
+                { "fkidindicador", editandoFkidIndicador }
+            };
+
+            await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", editandoId.ToString(), datosActualizados);
+            mostrarModalEditar = false;
+            await Cargar();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al guardar cambios: {ex.Message}";
+        }
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+        editandoId = 0;
+        editandoFkidFuente = 1;
+        editandoFkidIndicador = 1;
+    }
+
+    private async Task Eliminar(Dictionary<string, object> item)
+    {
+        try
+        {
+            string id = ObtenerValor(item, "id");
+            await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
+            await Cargar();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al eliminar: {ex.Message}";
+        }
+    }
+
+    private string ObtenerValor(Dictionary<string, object> diccionario, string clave)
+    {
+        if (diccionario == null || !diccionario.ContainsKey(clave))
+            return string.Empty;
+        return diccionario[clave]?.ToString() ?? string.Empty;
+    }
+
+    private class Fuente
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+    }
+
+    private class Indicador
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+    }
+}

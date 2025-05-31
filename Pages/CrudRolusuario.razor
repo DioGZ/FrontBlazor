@@ -1,0 +1,309 @@
+@page "/rolusuario"
+@attribute [Authorize]
+
+
+@using System.Collections.Generic
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+
+<PageTitle>Gestión de Roles por Usuario</PageTitle>
+
+<h1>Gestión de Roles por Usuario</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
+</div>
+
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nuevo Rol por Usuario</h5>
+            <form>
+                <div class="form-group">
+                    <label for="fkemail">Email</label>
+                    <select class="form-control" @bind="nuevoFkEmail">
+                        @foreach (var usuario in usuarios)
+                        {
+                            <option value="@usuario.Id">@usuario.Nombre</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="fkidrol">Rol</label>
+                    <select class="form-control" @bind="nuevoFkIdRol">
+                        @foreach (var rol in roles)
+                        {
+                            <option value="@rol.Id">@rol.Nombre</option>
+                        }
+                    </select>
+                </div>
+
+                <button type="button" class="btn btn-success" @onclick="Guardar">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (items == null || items.Count == 0)
+{
+    <p>No hay registros disponibles.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in items)
+                {
+                    <tr>
+                        <td>@ObtenerValor(item, "ID")</td>
+                        <td>@ObtenerValor(item, "fkemail")</td>
+                        <td>@ObtenerValor(item, "fkidrol")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => Editar(item)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarModalEditar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Rol por Usuario</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editarId">ID</label>
+                        <input type="text" class="form-control" @bind="editandoId" readonly />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fkemail">Email</label>
+                        <select class="form-control" @bind="editandoFkEmail">
+                            @foreach (var usuario in usuarios)
+                            {
+                                <option value="@usuario.Id">@usuario.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fkidrol">Rol</label>
+                        <select class="form-control" @bind="editandoFkIdRol">
+                            @foreach (var rol in roles)
+                            {
+                                <option value="@rol.Id">@rol.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicion">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (errorMensaje != null)
+{
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
+}
+@code {
+    private List<Dictionary<string, object>> items = new();
+    private List<Opcion> usuarios = new();
+    private List<Opcion> roles = new();
+
+    private bool cargando = true;
+    private string? errorMensaje = null;
+
+    private bool mostrarFormularioCrear = false;
+
+    private string nuevoFkEmail = string.Empty;
+    private string nuevoFkIdRol = string.Empty;
+
+    private bool mostrarModalEditar = false;
+
+    private string editandoId = string.Empty;
+    private string editandoFkEmail = string.Empty;
+    private string editandoFkIdRol = string.Empty;
+
+    private const string PROYECTO = "indicadores";
+    private const string TABLA = "rol_usuario";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+        usuarios = await CargarOpciones("usuario");
+        roles = await CargarOpciones("rol");
+    }
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
+            items = resultado ?? new List<Dictionary<string, object>>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task<List<Opcion>> CargarOpciones(string tabla)
+    {
+        var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, tabla);
+        return resultado?.Select(d => new Opcion
+        {
+            Id = tabla == "usuario" ? d["email"].ToString()! : d["id"].ToString()!,
+            Nombre = tabla == "usuario"
+                ? d.GetValueOrDefault("email")?.ToString() ?? "Sin Email"
+                : d.GetValueOrDefault("nombre")?.ToString() ?? "Sin Nombre"
+        }).ToList() ?? new List<Opcion>();
+    }
+
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+        nuevoFkEmail = usuarios.FirstOrDefault()?.Id ?? string.Empty;
+        nuevoFkIdRol = roles.FirstOrDefault()?.Id ?? string.Empty;
+    }
+
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            var nuevoItem = new Dictionary<string, object>
+            {
+                { "fkemail", nuevoFkEmail },
+                { "fkidrol", nuevoFkIdRol }
+            };
+
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoItem);
+            await Cargar();
+            mostrarFormularioCrear = false;
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al crear: {ex.Message}";
+        }
+    }
+
+    private void Editar(Dictionary<string, object> item)
+    {
+        editandoId = ObtenerValor(item, "ID");
+        editandoFkEmail = usuarios.FirstOrDefault(u => u.Id == ObtenerValor(item, "fkemail"))?.Id ?? string.Empty;
+        editandoFkIdRol = roles.FirstOrDefault(r => r.Id == ObtenerValor(item, "fkidrol"))?.Id ?? string.Empty;
+
+        mostrarModalEditar = true;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        try
+        {
+            // Validar si ya existe la combinación
+            var existente = items.FirstOrDefault(item =>
+                ObtenerValor(item, "fkemail") == editandoFkEmail &&
+                ObtenerValor(item, "fkidrol") == editandoFkIdRol);
+
+            if (existente != null)
+            {
+                errorMensaje = "Ya existe un registro con esta combinación de Email y Rol.";
+                return;
+            }
+
+            var datosActualizados = new Dictionary<string, object>
+        {
+            { "fkemail", editandoFkEmail },
+            { "fkidrol", editandoFkIdRol }
+        };
+
+            await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "ID", editandoId, datosActualizados);
+            mostrarModalEditar = false;
+            await Cargar();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al guardar cambios: {ex.Message}";
+        }
+    }
+
+    private async Task Eliminar(Dictionary<string, object> item)
+    {
+        try
+        {
+            if (item.ContainsKey("ID") && item["ID"] != null)
+            {
+                string id = item["ID"].ToString()!;
+                if (string.IsNullOrEmpty(id) || id == "0")
+                {
+                    errorMensaje = "ID inválido para eliminar.";
+                    return;
+                }
+                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "ID", id);
+                await Cargar();
+            }
+            else
+            {
+                errorMensaje = "El ID del elemento no es válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al eliminar: {ex.Message}";
+        }
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+    }
+
+    private string ObtenerValor(Dictionary<string, object> diccionario, string clave)
+        => diccionario.TryGetValue(clave, out var valor) ? valor?.ToString() ?? string.Empty : string.Empty;
+
+    public class Opcion
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+    }
+}

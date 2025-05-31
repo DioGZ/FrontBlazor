@@ -1,49 +1,48 @@
-@page "/roles"
+@page "/tipoindicadores"
 @attribute [Authorize]
 
 
 @using System.Collections.Generic
-@using System.Text.Json
 @using FrontBlazor.Services
 
 @inject ServicioEntidad servicioEntidad
 @inject NavigationManager navegacionManager
 
-<PageTitle>Lista de Roles</PageTitle>
+<PageTitle>Tipo de Indicadores</PageTitle>
 
-<h1>Roles</h1>
+<h1>Tipo de Indicadores</h1>
 
-<!-- Botón para crear un nuevo rol -->
+<!-- Botón para crear un nuevo tipo de indicador -->
 <div class="mb-3">
     <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
 </div>
 
-<!-- Formulario para crear un nuevo rol -->
+<!-- Formulario para crear un nuevo tipo de indicador -->
 @if (mostrarFormularioCrear)
 {
     <div class="card mb-3">
         <div class="card-body">
-            <h5 class="card-title">Nuevo Rol</h5>
+            <h5 class="card-title">Nuevo Tipo de Indicador</h5>
             <form>
                 <div class="form-group">
                     <label for="nombre">Nombre</label>
-                    <input type="text" class="form-control" @bind="nuevoRolNombre" />
+                    <input type="text" class="form-control" @bind="nuevoTipoNombre" />
                 </div>
-                <button type="button" class="btn btn-success" @onclick="GuardarRol">Guardar</button>
+                <button type="button" class="btn btn-success" @onclick="GuardarTipo">Guardar</button>
                 <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
             </form>
         </div>
     </div>
 }
 
-<!-- Tabla para mostrar la lista de roles -->
+<!-- Tabla de tipos de indicadores -->
 @if (cargando)
 {
     <p><em>Cargando...</em></p>
 }
-else if (roles == null || roles.Count == 0)
+else if (tipos == null || tipos.Count == 0)
 {
-    <p>No hay roles disponibles.</p>
+    <p>No hay tipos de indicador disponibles.</p>
 }
 else
 {
@@ -57,14 +56,14 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var rol in roles)
+                @foreach (var tipo in tipos)
                 {
                     <tr>
-                        <td>@ObtenerValor(rol, "id")</td>
-                        <td>@ObtenerValor(rol, "nombre")</td>
+                        <td>@ObtenerValor(tipo, "id")</td>
+                        <td>@ObtenerValor(tipo, "nombre")</td>
                         <td>
-                            <button class="btn btn-warning btn-sm" @onclick="() => EditarRol(rol)">Editar</button>
-                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRol(rol)">Eliminar</button>
+                            <button class="btn btn-warning btn-sm" @onclick="() => EditarTipo(tipo)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarTipo(tipo)">Eliminar</button>
                         </td>
                     </tr>
                 }
@@ -73,32 +72,32 @@ else
     </div>
 }
 
-<!-- Modal para edición -->
+<!-- Modal para editar tipo -->
 @if (mostrarModalEditar)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Editar Rol</h5>
+                    <h5 class="modal-title">Editar Tipo de Indicador</h5>
                     <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="editarNombre">Nombre</label>
-                        <input type="text" class="form-control" @bind="rolEditandoNombre" />
+                        <input type="text" class="form-control" @bind="tipoEditandoNombre" />
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
-                    <button class="btn btn-primary" @onclick="GuardarEdicionRol">Guardar cambios</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicionTipo">Guardar cambios</button>
                 </div>
             </div>
         </div>
     </div>
 }
 
-<!-- Mostrar mensaje de error si existe -->
+<!-- Mostrar mensaje de error -->
 @if (errorMensaje != null)
 {
     <div class="alert alert-danger">
@@ -107,26 +106,26 @@ else
 }
 
 @code {
-    private List<Dictionary<string, object>> roles = new();
+    private List<Dictionary<string, object>> tipos = new();
     private bool cargando = true;
     private string? errorMensaje = null;
 
     private const string PROYECTO = "indicadores";
-    private const string TABLA = "rol";
+    private const string TABLA = "tipoindicador";
 
     private bool mostrarFormularioCrear = false;
-    private string nuevoRolNombre = string.Empty;
+    private string nuevoTipoNombre = string.Empty;
 
     private bool mostrarModalEditar = false;
-    private Dictionary<string, object> rolEditando = new();
-    private string rolEditandoNombre = string.Empty;
+    private Dictionary<string, object> tipoEditando = new();
+    private string tipoEditandoNombre = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarRoles();
+        await CargarTipos();
     }
 
-    private async Task CargarRoles()
+    private async Task CargarTipos()
     {
         cargando = true;
         errorMensaje = null;
@@ -134,12 +133,12 @@ else
         try
         {
             var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
-            roles = resultado ?? new List<Dictionary<string, object>>();
+            tipos = resultado ?? new List<Dictionary<string, object>>();
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al cargar roles: {ex.Message}";
-            roles = new List<Dictionary<string, object>>();
+            errorMensaje = $"Error al cargar tipos: {ex.Message}";
+            tipos = new List<Dictionary<string, object>>();
         }
         finally
         {
@@ -155,55 +154,55 @@ else
     private void CancelarCreacion()
     {
         mostrarFormularioCrear = false;
-        nuevoRolNombre = string.Empty;
+        nuevoTipoNombre = string.Empty;
     }
 
-    private async Task GuardarRol()
+    private async Task GuardarTipo()
     {
         try
         {
-            var nuevoRol = new Dictionary<string, object>
+            var nuevoTipo = new Dictionary<string, object>
             {
-                { "nombre", nuevoRolNombre }
+                { "nombre", nuevoTipoNombre }
             };
 
-            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoRol);
-            await CargarRoles();
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoTipo);
+            await CargarTipos();
             mostrarFormularioCrear = false;
-            nuevoRolNombre = string.Empty;
+            nuevoTipoNombre = string.Empty;
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al crear el rol: {ex.Message}";
+            errorMensaje = $"Error al crear el tipo: {ex.Message}";
         }
     }
 
-    private void EditarRol(Dictionary<string, object> rol)
+    private void EditarTipo(Dictionary<string, object> tipo)
     {
-        rolEditando = new Dictionary<string, object>(rol);
-        rolEditandoNombre = ObtenerValor(rol, "nombre");
+        tipoEditando = new Dictionary<string, object>(tipo);
+        tipoEditandoNombre = ObtenerValor(tipo, "nombre");
         mostrarModalEditar = true;
     }
 
-    private async Task GuardarEdicionRol()
+    private async Task GuardarEdicionTipo()
     {
         try
         {
-            if (rolEditando.ContainsKey("id") && rolEditando["id"] != null)
+            if (tipoEditando.ContainsKey("id") && tipoEditando["id"] != null)
             {
-                string id = rolEditando["id"].ToString()!;
+                string id = tipoEditando["id"].ToString()!;
                 var datosActualizados = new Dictionary<string, object>
                 {
-                    { "nombre", rolEditandoNombre }
+                    { "nombre", tipoEditandoNombre }
                 };
 
                 await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", id, datosActualizados);
                 mostrarModalEditar = false;
-                await CargarRoles();
+                await CargarTipos();
             }
             else
             {
-                errorMensaje = "No se puede editar: el rol no tiene un ID válido.";
+                errorMensaje = "No se puede editar: el tipo no tiene un ID válido.";
             }
         }
         catch (Exception ex)
@@ -215,28 +214,28 @@ else
     private void CerrarModalEditar()
     {
         mostrarModalEditar = false;
-        rolEditando = new();
-        rolEditandoNombre = string.Empty;
+        tipoEditando = new();
+        tipoEditandoNombre = string.Empty;
     }
 
-    private async Task EliminarRol(Dictionary<string, object> rol)
+    private async Task EliminarTipo(Dictionary<string, object> tipo)
     {
         try
         {
-            if (rol.ContainsKey("id") && rol["id"] != null)
+            if (tipo.ContainsKey("id") && tipo["id"] != null)
             {
-                string id = rol["id"].ToString()!;
+                string id = tipo["id"].ToString()!;
                 await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
-                await CargarRoles();
+                await CargarTipos();
             }
             else
             {
-                errorMensaje = "El rol no tiene un ID válido.";
+                errorMensaje = "El tipo no tiene un ID válido.";
             }
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al eliminar el rol: {ex.Message}";
+            errorMensaje = $"Error al eliminar el tipo: {ex.Message}";
         }
     }
 

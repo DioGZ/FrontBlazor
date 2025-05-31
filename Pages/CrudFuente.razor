@@ -1,16 +1,17 @@
-@page "/usuario"
+@page "/fuente"
 @attribute [Authorize]
 
-
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @using System.Collections.Generic
 @using FrontBlazor.Services
 
 @inject ServicioEntidad servicioEntidad
 @inject NavigationManager navegacionManager
 
-<PageTitle>Usuarios</PageTitle>
+<PageTitle>Fuente</PageTitle>
 
-<h1>Usuarios</h1>
+<h1>Fuentes</h1>
 
 <div class="mb-3">
     <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
@@ -20,18 +21,14 @@
 {
     <div class="card mb-3">
         <div class="card-body">
-            <h5 class="card-title">Nuevo Usuario</h5>
+            <h5 class="card-title">Nueva Fuente</h5>
             <form>
                 <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" class="form-control" @bind="nuevoEmail" />
+                    <label for="nombre">Nombre</label>
+                    <textarea class="form-control" rows="4" @bind="nuevoNombre"></textarea>
                 </div>
-                <div class="form-group mt-2">
-                    <label>Contraseña</label>
-                    <input type="password" class="form-control" @bind="nuevaContrasena" />
-                </div>
-                <button type="button" class="btn btn-success mt-3" @onclick="Guardar">Guardar</button>
-                <button type="button" class="btn btn-secondary mt-3" @onclick="CancelarCreacion">Cancelar</button>
+                <button type="button" class="btn btn-success" @onclick="Guardar">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
             </form>
         </div>
     </div>
@@ -41,9 +38,9 @@
 {
     <p><em>Cargando...</em></p>
 }
-else if (usuarios == null || usuarios.Count == 0)
+else if (items == null || items.Count == 0)
 {
-    <p>No hay usuarios disponibles.</p>
+    <p>No hay fuentes disponibles.</p>
 }
 else
 {
@@ -51,20 +48,20 @@ else
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Email</th>
-                    <th>Contraseña</th>
+                    <th>ID</th>
+                    <th>Nombre</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var usuario in usuarios)
+                @foreach (var item in items)
                 {
                     <tr>
-                        <td>@ObtenerValor(usuario, "email")</td>
-                        <td>@ObtenerValor(usuario, "contrasena")</td>
+                        <td>@ObtenerValor(item, "id")</td>
+                        <td style="max-width: 500px; white-space: pre-wrap;">@ObtenerValor(item, "nombre")</td>
                         <td>
-                            <button class="btn btn-warning btn-sm" @onclick="() => Editar(usuario)">Editar</button>
-                            <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(usuario)">Eliminar</button>
+                            <button class="btn btn-warning btn-sm" @onclick="() => Editar(item)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
                         </td>
                     </tr>
                 }
@@ -76,20 +73,16 @@ else
 @if (mostrarModalEditar)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Editar Usuario</h5>
+                    <h5 class="modal-title">Editar Fuente</h5>
                     <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" class="form-control" @bind="editandoEmail" />
-                    </div>
-                    <div class="form-group mt-2">
-                        <label>Contraseña</label>
-                        <input type="password" class="form-control" @bind="editandoContrasena" />
+                        <label for="editarNombre">Nombre</label>
+                        <textarea class="form-control" rows="4" @bind="editandoNombre"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -103,25 +96,25 @@ else
 
 @if (errorMensaje != null)
 {
-    <div class="alert alert-danger">Error: @errorMensaje</div>
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
 }
 
 @code {
-    private List<Dictionary<string, object>> usuarios = new();
+    private List<Dictionary<string, object>> items = new();
     private bool cargando = true;
     private string? errorMensaje = null;
 
     private const string PROYECTO = "indicadores";
-    private const string TABLA = "usuario";
+    private const string TABLA = "fuente";
 
     private bool mostrarFormularioCrear = false;
-    private string nuevoEmail = string.Empty;
-    private string nuevaContrasena = string.Empty;
+    private string nuevoNombre = string.Empty;
 
     private bool mostrarModalEditar = false;
-    private Dictionary<string, object> usuarioEditando = new();
-    private string editandoEmail = string.Empty;
-    private string editandoContrasena = string.Empty;
+    private Dictionary<string, object> itemEditando = new();
+    private string editandoNombre = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,12 +129,12 @@ else
         try
         {
             var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
-            usuarios = resultado ?? new List<Dictionary<string, object>>();
+            items = resultado ?? new List<Dictionary<string, object>>();
         }
         catch (Exception ex)
         {
             errorMensaje = $"Error al cargar: {ex.Message}";
-            usuarios = new();
+            items = new List<Dictionary<string, object>>();
         }
         finally
         {
@@ -157,23 +150,22 @@ else
     private void CancelarCreacion()
     {
         mostrarFormularioCrear = false;
-        nuevoEmail = string.Empty;
-        nuevaContrasena = string.Empty;
+        nuevoNombre = string.Empty;
     }
 
     private async Task Guardar()
     {
         try
         {
-            var nuevo = new Dictionary<string, object>
+            var nuevoItem = new Dictionary<string, object>
             {
-                { "email", nuevoEmail },
-                { "contrasena", nuevaContrasena }
+                { "nombre", nuevoNombre }
             };
 
-            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevo);
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoItem);
             await Cargar();
-            CancelarCreacion();
+            mostrarFormularioCrear = false;
+            nuevoNombre = string.Empty;
         }
         catch (Exception ex)
         {
@@ -181,11 +173,10 @@ else
         }
     }
 
-    private void Editar(Dictionary<string, object> usuario)
+    private void Editar(Dictionary<string, object> item)
     {
-        usuarioEditando = new(usuario);
-        editandoEmail = ObtenerValor(usuario, "email");
-        editandoContrasena = ObtenerValor(usuario, "contrasena");
+        itemEditando = new Dictionary<string, object>(item);
+        editandoNombre = ObtenerValor(item, "nombre");
         mostrarModalEditar = true;
     }
 
@@ -193,22 +184,21 @@ else
     {
         try
         {
-            if (usuarioEditando.ContainsKey("email") && usuarioEditando["email"] != null)
+            if (itemEditando.ContainsKey("id") && itemEditando["id"] != null)
             {
-                string email = usuarioEditando["email"].ToString()!;
+                string id = itemEditando["id"].ToString()!;
                 var datosActualizados = new Dictionary<string, object>
                 {
-                    { "email", editandoEmail },
-                    { "contrasena", editandoContrasena }
+                    { "nombre", editandoNombre }
                 };
 
-                await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "email", email, datosActualizados);
+                await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", id, datosActualizados);
                 mostrarModalEditar = false;
                 await Cargar();
             }
             else
             {
-                errorMensaje = "No se puede editar: el usuario no tiene un email válido.";
+                errorMensaje = "No se puede editar: el ID no es válido.";
             }
         }
         catch (Exception ex)
@@ -220,24 +210,23 @@ else
     private void CerrarModalEditar()
     {
         mostrarModalEditar = false;
-        usuarioEditando = new();
-        editandoEmail = string.Empty;
-        editandoContrasena = string.Empty;
+        itemEditando = new();
+        editandoNombre = string.Empty;
     }
 
-    private async Task Eliminar(Dictionary<string, object> usuario)
+    private async Task Eliminar(Dictionary<string, object> item)
     {
         try
         {
-            if (usuario.ContainsKey("email") && usuario["email"] != null)
+            if (item.ContainsKey("id") && item["id"] != null)
             {
-                string email = usuario["email"].ToString()!;
-                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "email", email);
+                string id = item["id"].ToString()!;
+                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
                 await Cargar();
             }
             else
             {
-                errorMensaje = "El usuario no tiene un email válido.";
+                errorMensaje = "El ID del elemento no es válido.";
             }
         }
         catch (Exception ex)

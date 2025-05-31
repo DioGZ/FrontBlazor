@@ -1,49 +1,48 @@
-@page "/roles"
+@page "/sentido"
 @attribute [Authorize]
 
 
 @using System.Collections.Generic
-@using System.Text.Json
 @using FrontBlazor.Services
 
 @inject ServicioEntidad servicioEntidad
 @inject NavigationManager navegacionManager
 
-<PageTitle>Lista de Roles</PageTitle>
+<PageTitle>Sentidos</PageTitle>
 
-<h1>Roles</h1>
+<h1>Sentidos</h1>
 
-<!-- Botón para crear un nuevo rol -->
+<!-- Botón para crear un nuevo sentido -->
 <div class="mb-3">
     <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
 </div>
 
-<!-- Formulario para crear un nuevo rol -->
+<!-- Formulario para crear un nuevo sentido -->
 @if (mostrarFormularioCrear)
 {
     <div class="card mb-3">
         <div class="card-body">
-            <h5 class="card-title">Nuevo Rol</h5>
+            <h5 class="card-title">Nuevo Sentido</h5>
             <form>
                 <div class="form-group">
                     <label for="nombre">Nombre</label>
-                    <input type="text" class="form-control" @bind="nuevoRolNombre" />
+                    <input type="text" class="form-control" @bind="nuevoNombre" />
                 </div>
-                <button type="button" class="btn btn-success" @onclick="GuardarRol">Guardar</button>
+                <button type="button" class="btn btn-success" @onclick="GuardarSentido">Guardar</button>
                 <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
             </form>
         </div>
     </div>
 }
 
-<!-- Tabla para mostrar la lista de roles -->
+<!-- Tabla con sentidos existentes -->
 @if (cargando)
 {
     <p><em>Cargando...</em></p>
 }
-else if (roles == null || roles.Count == 0)
+else if (sentidos == null || sentidos.Count == 0)
 {
-    <p>No hay roles disponibles.</p>
+    <p>No hay sentido disponible.</p>
 }
 else
 {
@@ -57,14 +56,14 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var rol in roles)
+                @foreach (var sentido in sentidos)
                 {
                     <tr>
-                        <td>@ObtenerValor(rol, "id")</td>
-                        <td>@ObtenerValor(rol, "nombre")</td>
+                        <td>@ObtenerValor(sentido, "id")</td>
+                        <td>@ObtenerValor(sentido, "nombre")</td>
                         <td>
-                            <button class="btn btn-warning btn-sm" @onclick="() => EditarRol(rol)">Editar</button>
-                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarRol(rol)">Eliminar</button>
+                            <button class="btn btn-warning btn-sm" @onclick="() => EditarSentido(sentido)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => EliminarSentido(sentido)">Eliminar</button>
                         </td>
                     </tr>
                 }
@@ -73,32 +72,32 @@ else
     </div>
 }
 
-<!-- Modal para edición -->
+<!-- Modal de edición -->
 @if (mostrarModalEditar)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Editar Rol</h5>
+                    <h5 class="modal-title">Editar Sentido</h5>
                     <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="editarNombre">Nombre</label>
-                        <input type="text" class="form-control" @bind="rolEditandoNombre" />
+                        <input type="text" class="form-control" @bind="sentidoEditandoNombre" />
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
-                    <button class="btn btn-primary" @onclick="GuardarEdicionRol">Guardar cambios</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicionSentido">Guardar cambios</button>
                 </div>
             </div>
         </div>
     </div>
 }
 
-<!-- Mostrar mensaje de error si existe -->
+<!-- Mensaje de error -->
 @if (errorMensaje != null)
 {
     <div class="alert alert-danger">
@@ -107,26 +106,26 @@ else
 }
 
 @code {
-    private List<Dictionary<string, object>> roles = new();
+    private List<Dictionary<string, object>> sentidos = new();
     private bool cargando = true;
     private string? errorMensaje = null;
 
     private const string PROYECTO = "indicadores";
-    private const string TABLA = "rol";
+    private const string TABLA = "sentido";
 
     private bool mostrarFormularioCrear = false;
-    private string nuevoRolNombre = string.Empty;
+    private string nuevoNombre = string.Empty;
 
     private bool mostrarModalEditar = false;
-    private Dictionary<string, object> rolEditando = new();
-    private string rolEditandoNombre = string.Empty;
+    private Dictionary<string, object> sentidoEditando = new();
+    private string sentidoEditandoNombre = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarRoles();
+        await CargarSentidos();
     }
 
-    private async Task CargarRoles()
+    private async Task CargarSentidos()
     {
         cargando = true;
         errorMensaje = null;
@@ -134,12 +133,12 @@ else
         try
         {
             var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
-            roles = resultado ?? new List<Dictionary<string, object>>();
+            sentidos = resultado ?? new List<Dictionary<string, object>>();
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al cargar roles: {ex.Message}";
-            roles = new List<Dictionary<string, object>>();
+            errorMensaje = $"Error al cargar sentidos: {ex.Message}";
+            sentidos = new List<Dictionary<string, object>>();
         }
         finally
         {
@@ -155,55 +154,55 @@ else
     private void CancelarCreacion()
     {
         mostrarFormularioCrear = false;
-        nuevoRolNombre = string.Empty;
+        nuevoNombre = string.Empty;
     }
 
-    private async Task GuardarRol()
+    private async Task GuardarSentido()
     {
         try
         {
-            var nuevoRol = new Dictionary<string, object>
+            var nuevoSentido = new Dictionary<string, object>
             {
-                { "nombre", nuevoRolNombre }
+                { "nombre", nuevoNombre }
             };
 
-            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoRol);
-            await CargarRoles();
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoSentido);
+            await CargarSentidos();
             mostrarFormularioCrear = false;
-            nuevoRolNombre = string.Empty;
+            nuevoNombre = string.Empty;
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al crear el rol: {ex.Message}";
+            errorMensaje = $"Error al crear el sentido: {ex.Message}";
         }
     }
 
-    private void EditarRol(Dictionary<string, object> rol)
+    private void EditarSentido(Dictionary<string, object> sentido)
     {
-        rolEditando = new Dictionary<string, object>(rol);
-        rolEditandoNombre = ObtenerValor(rol, "nombre");
+        sentidoEditando = new Dictionary<string, object>(sentido);
+        sentidoEditandoNombre = ObtenerValor(sentido, "nombre");
         mostrarModalEditar = true;
     }
 
-    private async Task GuardarEdicionRol()
+    private async Task GuardarEdicionSentido()
     {
         try
         {
-            if (rolEditando.ContainsKey("id") && rolEditando["id"] != null)
+            if (sentidoEditando.ContainsKey("id") && sentidoEditando["id"] != null)
             {
-                string id = rolEditando["id"].ToString()!;
+                string id = sentidoEditando["id"].ToString()!;
                 var datosActualizados = new Dictionary<string, object>
                 {
-                    { "nombre", rolEditandoNombre }
+                    { "nombre", sentidoEditandoNombre }
                 };
 
                 await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", id, datosActualizados);
                 mostrarModalEditar = false;
-                await CargarRoles();
+                await CargarSentidos();
             }
             else
             {
-                errorMensaje = "No se puede editar: el rol no tiene un ID válido.";
+                errorMensaje = "No se puede editar: el sentido no tiene un ID válido.";
             }
         }
         catch (Exception ex)
@@ -215,28 +214,28 @@ else
     private void CerrarModalEditar()
     {
         mostrarModalEditar = false;
-        rolEditando = new();
-        rolEditandoNombre = string.Empty;
+        sentidoEditando = new();
+        sentidoEditandoNombre = string.Empty;
     }
 
-    private async Task EliminarRol(Dictionary<string, object> rol)
+    private async Task EliminarSentido(Dictionary<string, object> sentido)
     {
         try
         {
-            if (rol.ContainsKey("id") && rol["id"] != null)
+            if (sentido.ContainsKey("id") && sentido["id"] != null)
             {
-                string id = rol["id"].ToString()!;
+                string id = sentido["id"].ToString()!;
                 await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
-                await CargarRoles();
+                await CargarSentidos();
             }
             else
             {
-                errorMensaje = "El rol no tiene un ID válido.";
+                errorMensaje = "El sentido no tiene un ID válido.";
             }
         }
         catch (Exception ex)
         {
-            errorMensaje = $"Error al eliminar el rol: {ex.Message}";
+            errorMensaje = $"Error al eliminar el sentido: {ex.Message}";
         }
     }
 

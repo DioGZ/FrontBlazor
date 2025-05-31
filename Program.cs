@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Components.Web;       // Contiene componentes web y c
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;  // Proporciona la infraestructura para hospedar aplicaciones Blazor WebAssembly en el navegador
 using FrontBlazor;                              // El espacio de nombres raíz de nuestro proyecto
 using FrontBlazor.Services;                     // Contiene los servicios personalizados para comunicación con la API
+using Microsoft.AspNetCore.Components.Authorization;
+using Blazored.LocalStorage;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 // Crea un constructor de host WebAssembly con configuración predeterminada
 // Este objeto se utiliza para configurar los servicios y componentes de la aplicación
@@ -17,14 +21,31 @@ builder.RootComponents.Add<App>("#app");
 // como títulos de página o metadatos
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// Configura un servicio HttpClient con ámbito (scoped) en el contenedor de inyección de dependencias
-// AddScoped significa que se creará una nueva instancia del servicio para cada sesión de usuario
-// Este HttpClient se inicializa con la dirección base de la API genérica
-// La URL base debe terminar con una barra "/" para que las rutas relativas funcionen correctamente
-builder.Services.AddScoped(sp => new HttpClient { 
-    BaseAddress = new Uri("http://localhost:5204/api/") 
+// Configuración de HttpClient como singleton para mantener el estado de autenticación
+builder.Services.AddScoped(sp =>
+{
+    var http = new HttpClient
+    {
+        BaseAddress = new Uri("http://localhost:5204/")
+    };
+    return http;
 });
 
+// Configuración de servicios de autenticación en orden específico
+builder.Services.AddBlazoredLocalStorage(config =>
+{
+    config.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+    config.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+});
+
+// Primero registramos el AuthenticationStateProvider
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+
+// Luego agregamos la autorización
+builder.Services.AddAuthorizationCore();
+
+// Finalmente registramos nuestro servicio de autenticación
+builder.Services.AddScoped<AuthService>();
 // Registra el servicio genérico de entidades en el contenedor de inyección de dependencias
 // Esto permitirá inyectar el servicio en cualquier componente Blazor que lo necesite
 // El servicio maneja todas las operaciones CRUD con cualquier tabla de la base de datos
@@ -34,4 +55,12 @@ builder.Services.AddScoped<ServicioEntidad>();
 // builder.Build() crea la instancia de WebAssemblyHost con todas las configuraciones definidas
 // RunAsync() inicia la aplicación y espera hasta que se cierre
 // El uso de await asegura que la aplicación siga ejecutándose mientras el navegador esté abierto
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Inicializar el estado de autenticación
+var authService = host.Services.GetRequiredService<AuthService>();
+await authService.InitializeAuthState();
+
+await host.RunAsync();
+
+

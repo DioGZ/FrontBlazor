@@ -1,0 +1,298 @@
+@page "/represenvisualporindicador"
+@attribute [Authorize]
+
+
+@using System.Collections.Generic
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+
+<PageTitle>Gestión de Representación Visual por Indicador</PageTitle>
+
+<h1>Gestión de Representación Visual por Indicador</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo</button>
+</div>
+
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nueva Relación</h5>
+            <form>
+                <!-- NO mostrar el campo ID aquí -->
+
+                <div class="form-group">
+                    <label for="fkidindicador">Indicador</label>
+                    <select class="form-control" @bind="nuevoFkidIndicador">
+                        @foreach (var indicador in indicadores)
+                        {
+                            <option value="@indicador.Id">@indicador.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fkidrepresenvisual">Representación Visual</label>
+                    <select class="form-control" @bind="nuevoFkidRepresenVisual">
+                        @foreach (var represenvisual in represenvisuales)
+                        {
+                            <option value="@represenvisual.Id">@represenvisual.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <button type="button" class="btn btn-success" @onclick="Guardar">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (items == null || items.Count == 0)
+{
+    <p>No hay registros disponibles.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Indicador</th>
+                    <th>Representación Visual</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in items)
+                {
+                    <tr>
+                        <td>@ObtenerValor(item, "ID")</td>
+                        <td>@ObtenerValor(item, "fkidindicador")</td>
+                        <td>@ObtenerValor(item, "fkidrepresenvisual")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => Editar(item)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarModalEditar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Relación</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editarId">ID</label>
+                        <input type="text" class="form-control" @bind="editandoId" readonly />
+                    </div>
+                    <div class="form-group">
+                        <label for="fkidindicador">Indicador</label>
+                        <select class="form-control" @bind="editandoFkidIndicador">
+                            @foreach (var indicador in indicadores)
+                            {
+                                <option value="@indicador.Id">@indicador.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fkidrepresenvisual">Representación Visual</label>
+                        <select class="form-control" @bind="editandoFkidRepresenVisual">
+                            @foreach (var represenvisual in represenvisuales)
+                            {
+                                <option value="@represenvisual.Id">@represenvisual.Nombre</option>
+                            }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicion">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (errorMensaje != null)
+{
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
+}
+
+@code {
+    private List<Dictionary<string, object>> items = new();
+    private List<Opcion> indicadores = new();
+    private List<Opcion> represenvisuales = new();
+
+    private bool cargando = true;
+    private string? errorMensaje = null;
+
+    private bool mostrarFormularioCrear = false;
+    private string nuevoId = string.Empty;
+    private string nuevoFkidIndicador = string.Empty;
+    private string nuevoFkidRepresenVisual = string.Empty;
+
+    private bool mostrarModalEditar = false;
+    private string editandoId = string.Empty;
+    private string editandoFkidIndicador = string.Empty;
+    private string editandoFkidRepresenVisual = string.Empty;
+
+    private const string PROYECTO = "indicadores";
+    private const string TABLA = "represenvisualporindicador";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+        indicadores = await CargarOpciones("indicador");
+        represenvisuales = await CargarOpciones("represenvisual");
+    }
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
+            items = resultado ?? new List<Dictionary<string, object>>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task<List<Opcion>> CargarOpciones(string tabla)
+    {
+        var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, tabla);
+        return resultado?.Select(d => new Opcion
+        {
+            Id = d["id"].ToString()!,
+            Nombre = d.ContainsKey("nombre") ? d["nombre"].ToString()! : d["id"].ToString()!
+        }).ToList() ?? new List<Opcion>();
+    }
+
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+        // nuevoId no es necesario limpiar ni usar aquí
+        nuevoFkidIndicador = indicadores.FirstOrDefault()?.Id ?? string.Empty;
+        nuevoFkidRepresenVisual = represenvisuales.FirstOrDefault()?.Id ?? string.Empty;
+    }
+
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            var nuevoItem = new Dictionary<string, object>
+        {
+            // No incluir ID aquí para que el servidor o base de datos lo genere
+            { "fkidindicador", nuevoFkidIndicador },
+            { "fkidrepresenvisual", nuevoFkidRepresenVisual }
+        };
+
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoItem);
+            await Cargar();
+            mostrarFormularioCrear = false;
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al crear: {ex.Message}";
+        }
+    }
+
+    private void Editar(Dictionary<string, object> item)
+    {
+        editandoId = ObtenerValor(item, "ID");
+        editandoFkidIndicador = ObtenerValor(item, "fkidindicador");
+        editandoFkidRepresenVisual = ObtenerValor(item, "fkidrepresenvisual");
+        mostrarModalEditar = true;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        try
+        {
+            var datosActualizados = new Dictionary<string, object>
+        {
+            { "fkidindicador", editandoFkidIndicador },
+            { "fkidrepresenvisual", editandoFkidRepresenVisual }
+        };
+
+            await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "ID", editandoId, datosActualizados);
+            mostrarModalEditar = false;
+            await Cargar();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al guardar cambios: {ex.Message}";
+        }
+    }
+
+    private async Task Eliminar(Dictionary<string, object> item)
+    {
+        try
+        {
+            if (item.ContainsKey("ID") && item["ID"] != null)
+            {
+                string id = item["ID"].ToString()!;
+                if (string.IsNullOrEmpty(id) || id == "0")
+                {
+                    errorMensaje = "ID inválido para eliminar.";
+                    return;
+                }
+                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "ID", id);
+                await Cargar();
+            }
+            else
+            {
+                errorMensaje = "El ID del elemento no es válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al eliminar: {ex.Message}";
+        }
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+    }
+
+    private string ObtenerValor(Dictionary<string, object> diccionario, string clave)
+    {
+        return diccionario.TryGetValue(clave, out var valor) ? valor?.ToString() ?? string.Empty : string.Empty;
+    }
+
+    public class Opcion
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+    }
+}

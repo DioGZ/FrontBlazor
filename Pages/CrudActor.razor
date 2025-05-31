@@ -1,0 +1,311 @@
+@page "/actor"
+@attribute [Authorize]
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using System.Collections.Generic
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+
+<PageTitle>Actor</PageTitle>
+
+<h1>Actores</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo Actor</button>
+</div>
+
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nuevo Actor</h5>
+            <form>
+                <div class="form-group">
+                    <label for="id">ID</label>
+                    <input type="text" class="form-control" @bind="nuevoId" />
+                </div>
+                <div class="form-group">
+                    <label for="nombre">Nombre</label>
+                    <input type="text" class="form-control" @bind="nuevoNombre" />
+                </div>
+                <div class="form-group">
+                    <label for="fkidtipoactor">Tipo de Actor</label>
+                    <select class="form-control" @bind="nuevoFkidTipoActor">
+                        @foreach (var tipo in tiposActores)
+                        {
+                            <option value="@tipo.Id">@tipo.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <button type="button" class="btn btn-success" @onclick="Guardar">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (items == null || items.Count == 0)
+{
+    <p>No hay actores disponibles.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Tipo de Actor</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in items)
+                {
+                    <tr>
+                        <td>@ObtenerValor(item, "id")</td>
+                        <td>@ObtenerValor(item, "nombre")</td>
+                        <td>@ObtenerValor(item, "fkidtipoactor")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => Editar(item)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarModalEditar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Actor</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editarId">ID</label>
+                        <input type="text" class="form-control" @bind="editandoId" readonly />
+                    </div>
+                    <div class="form-group">
+                        <label for="editarNombre">Nombre</label>
+                        <input type="text" class="form-control" @bind="editandoNombre" />
+                    </div>
+                    <div class="form-group">
+                        <label for="editarFkidtipoactor">Tipo de Actor</label>
+                        <select class="form-control" @bind="editandoFkidTipoActor">
+                            @foreach (var tipo in tiposActores)
+                            {
+                                <option value="@tipo.Id">@tipo.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicion">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (errorMensaje != null)
+{
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
+}
+
+@code {
+    private List<Dictionary<string, object>> items = new();
+    private bool cargando = true;
+    private string? errorMensaje = null;
+
+    private const string PROYECTO = "indicadores";
+    private const string TABLA = "actor";
+    private const string TABLA_TIPOS = "tipoactor"; // Tabla de los tipos de actores
+
+    private bool mostrarFormularioCrear = false;
+    private string nuevoId = string.Empty;
+    private string nuevoNombre = string.Empty;
+    private int nuevoFkidTipoActor = 1; // Valor por defecto
+
+    private bool mostrarModalEditar = false;
+    private Dictionary<string, object> itemEditando = new();
+    private string editandoId = string.Empty;
+    private string editandoNombre = string.Empty;
+    private int editandoFkidTipoActor = 1;
+
+    private List<TipoActor> tiposActores = new(); // Lista para los tipos de actores
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+        await CargarTiposActores(); // Cargar los tipos de actores
+    }
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        errorMensaje = null;
+
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
+            items = resultado ?? new List<Dictionary<string, object>>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar: {ex.Message}";
+            items = new List<Dictionary<string, object>>();
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarTiposActores()
+    {
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA_TIPOS);
+            tiposActores = resultado?.Select(item => new TipoActor
+            {
+                Id = int.Parse(ObtenerValor(item, "id")),
+                Nombre = ObtenerValor(item, "nombre")
+            }).ToList() ?? new List<TipoActor>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar tipos de actores: {ex.Message}";
+            tiposActores = new List<TipoActor>();
+        }
+    }
+
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+    }
+
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+        nuevoId = string.Empty;
+        nuevoNombre = string.Empty;
+        nuevoFkidTipoActor = 1;
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            if (items.Any(item => ObtenerValor(item, "id") == nuevoId))
+            {
+                errorMensaje = "El ID ya existe. Por favor, elige un ID �nico.";
+                return;
+            }
+
+            var nuevoItem = new Dictionary<string, object>
+            {
+                { "id", nuevoId },
+                { "nombre", nuevoNombre },
+                { "fkidtipoactor", nuevoFkidTipoActor }
+            };
+
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoItem);
+            await Cargar();
+            mostrarFormularioCrear = false;
+            nuevoId = string.Empty;
+            nuevoNombre = string.Empty;
+            nuevoFkidTipoActor = 1;
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al crear: {ex.Message}";
+        }
+    }
+
+    private void Editar(Dictionary<string, object> item)
+    {
+        itemEditando = new Dictionary<string, object>(item);
+        editandoId = ObtenerValor(item, "id");
+        editandoNombre = ObtenerValor(item, "nombre");
+        editandoFkidTipoActor = int.TryParse(ObtenerValor(item, "fkidtipoactor"), out var tipo) ? tipo : 1;
+        mostrarModalEditar = true;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        try
+        {
+            var datosActualizados = new Dictionary<string, object>
+            {
+                { "nombre", editandoNombre },
+                { "fkidtipoactor", editandoFkidTipoActor }
+            };
+
+            await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", editandoId, datosActualizados);
+            mostrarModalEditar = false;
+            await Cargar();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al guardar cambios: {ex.Message}";
+        }
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+        editandoId = string.Empty;
+        editandoNombre = string.Empty;
+        editandoFkidTipoActor = 1;
+    }
+
+    private async Task Eliminar(Dictionary<string, object> item)
+    {
+        try
+        {
+            if (item.ContainsKey("id") && item["id"] != null)
+            {
+                string id = item["id"].ToString()!;
+                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
+                await Cargar();
+            }
+            else
+            {
+                errorMensaje = "El ID del elemento no es v�lido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al eliminar: {ex.Message}";
+        }
+    }
+
+    private string ObtenerValor(Dictionary<string, object> diccionario, string clave)
+    {
+        if (diccionario == null || !diccionario.ContainsKey(clave))
+            return string.Empty;
+        return diccionario[clave]?.ToString() ?? string.Empty;
+    }
+
+    private class TipoActor
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+    }
+}

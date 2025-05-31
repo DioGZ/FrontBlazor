@@ -1,0 +1,365 @@
+@page "/articulo"
+@attribute [Authorize]
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using System.Collections.Generic
+@using FrontBlazor.Services
+
+@inject ServicioEntidad servicioEntidad
+
+<PageTitle>Artículos</PageTitle>
+
+
+<h1>Artículos</h1>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="MostrarFormularioCrear">Crear Nuevo Artículo</button>
+</div>
+
+@if (mostrarFormularioCrear)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Nuevo Artículo</h5>
+            <form>
+                <div class="form-group">
+                    <label for="id">ID</label>
+                    <input type="text" class="form-control" @bind="nuevoId" />
+                </div>
+                <div class="form-group">
+                    <label for="nombre">Nombre</label>
+                    <input type="text" class="form-control" @bind="nuevoNombre" />
+                </div>
+                <div class="form-group">
+                    <label for="fkidseccion">Sección</label>
+                    <select class="form-control" @bind="nuevoFkidSeccion">
+                        @foreach (var seccion in secciones)
+                        {
+                            <option value="@seccion.Id">@seccion.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fkidsubseccion">Subsección</label>
+                    <select class="form-control" @bind="nuevoFkidSubseccion">
+                        @foreach (var subseccion in subsecciones)
+                        {
+                            <option value="@subseccion.Id">@subseccion.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="descripcion">Descripción</label>
+                    <input type="text" class="form-control" @bind="nuevoDescripcion" />
+                </div>
+                <button type="button" class="btn btn-success" @onclick="Guardar">Guardar</button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelarCreacion">Cancelar</button>
+            </form>
+        </div>
+    </div>
+}
+
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else if (items == null || items.Count == 0)
+{
+    <p>No hay artículos disponibles.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Sección</th>
+                    <th>Subsección</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in items)
+                {
+                    <tr>
+                        <td>@ObtenerValor(item, "id")</td>
+                        <td>@ObtenerValor(item, "nombre")</td>
+                        <td>@ObtenerValor(item, "fkidseccion")</td>
+                        <td>@ObtenerValor(item, "fkidsubseccion")</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" @onclick="() => Editar(item)">Editar</button>
+                            <button class="btn btn-danger btn-sm" @onclick="() => Eliminar(item)">Eliminar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarModalEditar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Artículo</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalEditar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editarId">ID</label>
+                        <input type="text" class="form-control" @bind="editandoId" readonly />
+                    </div>
+                    <div class="form-group">
+                        <label for="editarNombre">Nombre</label>
+                        <input type="text" class="form-control" @bind="editandoNombre" />
+                    </div>
+                    <div class="form-group">
+                        <label for="editarFkidseccion">Sección</label>
+                        <select class="form-control" @bind="editandoFkidSeccion">
+                            @foreach (var seccion in secciones)
+                            {
+                                <option value="@seccion.Id">@seccion.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editarFkidsubseccion">Subsección</label>
+                        <select class="form-control" @bind="editandoFkidSubseccion">
+                            @foreach (var subseccion in subsecciones)
+                            {
+                                <option value="@subseccion.Id">@subseccion.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CerrarModalEditar">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="GuardarEdicion">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (errorMensaje != null)
+{
+    <div class="alert alert-danger">
+        Error: @errorMensaje
+    </div>
+}
+
+@code {
+    private List<Dictionary<string, object>> items = new();
+    private List<Seccion> secciones = new(); // Lista de secciones
+    private List<Subseccion> subsecciones = new(); // Lista de subsecciones
+    private bool cargando = true;
+    private string? errorMensaje = null;
+
+    private const string PROYECTO = "indicadores";
+    private const string TABLA = "articulo";
+    private const string TABLA_SECCIONES = "seccion";
+    private const string TABLA_SUBSECCIONES = "subseccion";
+
+    private bool mostrarFormularioCrear = false;
+    private string nuevoId = string.Empty;
+    private string nuevoNombre = string.Empty;
+    private int nuevoFkidSeccion = 1; // Valor por defecto
+    private int nuevoFkidSubseccion = 1; // Valor por defecto
+
+    private bool mostrarModalEditar = false;
+    private Dictionary<string, object> itemEditando = new(); // Variable para almacenar el elemento en edición
+    private string nuevoDescripcion = string.Empty;
+    private string editandoId = string.Empty;
+    private string editandoNombre = string.Empty;
+    private int editandoFkidSeccion = 1;
+    private int editandoFkidSubseccion = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Cargar();
+        await CargarSecciones();
+        await CargarSubsecciones();
+    }
+
+    private async Task Cargar()
+    {
+        cargando = true;
+        errorMensaje = null;
+
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA);
+            items = resultado ?? new List<Dictionary<string, object>>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task CargarSecciones()
+    {
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA_SECCIONES);
+            secciones = resultado?.Select(item => new Seccion
+            {
+                Id = int.Parse(ObtenerValor(item, "id")),
+                Nombre = ObtenerValor(item, "nombre")
+            }).ToList() ?? new List<Seccion>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar secciones: {ex.Message}";
+        }
+    }
+
+    private async Task CargarSubsecciones()
+    {
+        try
+        {
+            var resultado = await servicioEntidad.ObtenerTodosAsync(PROYECTO, TABLA_SUBSECCIONES);
+            subsecciones = resultado?.Select(item => new Subseccion
+            {
+                Id = int.Parse(ObtenerValor(item, "id")),
+                Nombre = ObtenerValor(item, "nombre")
+            }).ToList() ?? new List<Subseccion>();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al cargar subsecciones: {ex.Message}";
+        }
+    }
+
+    private void MostrarFormularioCrear()
+    {
+        mostrarFormularioCrear = true;
+    }
+
+    private void CancelarCreacion()
+    {
+        mostrarFormularioCrear = false;
+        nuevoId = string.Empty;
+        nuevoNombre = string.Empty;
+        nuevoFkidSeccion = 1;
+        nuevoFkidSubseccion = 1;
+    }
+
+    private async Task Guardar()
+    {
+        try
+        {
+            var nuevoItem = new Dictionary<string, object>
+            {
+                { "id", nuevoId },
+                { "nombre", nuevoNombre },
+                { "descripcion", nuevoDescripcion },
+                { "fkidseccion", nuevoFkidSeccion },
+                { "fkidsubseccion", nuevoFkidSubseccion }
+            };
+
+            await servicioEntidad.CrearAsync(PROYECTO, TABLA, nuevoItem);
+            await Cargar();
+            mostrarFormularioCrear = false;
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al crear: {ex.Message}";
+        }
+    }
+
+    private void Editar(Dictionary<string, object> item)
+    {
+        itemEditando = new Dictionary<string, object>(item);
+        editandoId = ObtenerValor(item, "id");
+        editandoNombre = ObtenerValor(item, "nombre");
+        editandoFkidSeccion = int.TryParse(ObtenerValor(item, "fkidseccion"), out var seccion) ? seccion : 1;
+        editandoFkidSubseccion = int.TryParse(ObtenerValor(item, "fkidsubseccion"), out var subseccion) ? subseccion : 1;
+        mostrarModalEditar = true;
+    }
+
+    private void CerrarModalEditar()
+    {
+        mostrarModalEditar = false;
+        editandoId = string.Empty;
+        editandoNombre = string.Empty;
+        editandoFkidSeccion = 1;
+        editandoFkidSubseccion = 1;
+    }
+
+    private async Task GuardarEdicion()
+    {
+        try
+        {
+            var datosActualizados = new Dictionary<string, object>
+            {
+                { "nombre", editandoNombre },
+                { "fkidseccion", editandoFkidSeccion },
+                { "fkidsubseccion", editandoFkidSubseccion }
+            };
+
+            await servicioEntidad.ActualizarAsync(PROYECTO, TABLA, "id", editandoId, datosActualizados);
+            mostrarModalEditar = false;
+            await Cargar();
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al guardar cambios: {ex.Message}";
+        }
+    }
+
+    private async Task Eliminar(Dictionary<string, object> item)
+    {
+        try
+        {
+            if (item.ContainsKey("id") && item["id"] != null)
+            {
+                string id = item["id"].ToString()!;
+                Console.WriteLine($"Eliminando registro con ID: {id}"); // Debug
+                if (string.IsNullOrEmpty(id) || id == "0")
+                {
+                    errorMensaje = "ID inválido para eliminar.";
+                    return;
+                }
+                await servicioEntidad.EliminarAsync(PROYECTO, TABLA, "id", id);
+                await Cargar();
+            }
+            else
+            {
+                errorMensaje = "El ID del elemento no es válido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = $"Error al eliminar: {ex.Message}";
+        }
+    }
+
+    private string ObtenerValor(Dictionary<string, object> diccionario, string clave)
+    {
+        if (diccionario == null || !diccionario.ContainsKey(clave))
+            return string.Empty;
+        return diccionario[clave]?.ToString() ?? string.Empty;
+    }
+
+    private class Seccion
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+    }
+
+    private class Subseccion
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+    }
+}
