@@ -32,17 +32,9 @@ builder.Services.AddScoped(sp =>
 });
 
 // Configuración de servicios de autenticación en orden específico
-builder.Services.AddBlazoredLocalStorage(config =>
-{
-    config.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
-    config.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-});
-
-// Primero registramos el AuthenticationStateProvider
-builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
-
-// Luego agregamos la autorización
+builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 
 // Finalmente registramos nuestro servicio de autenticación
 builder.Services.AddScoped<AuthService>();

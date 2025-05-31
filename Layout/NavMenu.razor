@@ -1,5 +1,5 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@inject AuthenticationStateProvider AuthenticationStateProvider
+@using FrontBlazor.Services
 @inject NavigationManager NavigationManager
 @inject AuthService AuthService
 
@@ -16,7 +16,7 @@
         <!-- title: texto que aparece al pasar el cursor sobre el botón -->
         <!-- navbar-toggler: estilo Bootstrap para el botón de alternar menú -->
         <!-- @onclick: evento que llama al método ToggleNavMenu cuando se hace clic -->
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+        <button title="Navigation menu" class="navbar-toggler" @onclick="@ToggleNavMenu">
             <!-- Icono de tres líneas horizontales (hamburguesa) -->
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -27,7 +27,7 @@
 <!-- @NavMenuCssClass: clase dinámica que controla si el menú está colapsado o no -->
 <!-- nav-scrollable: permite desplazamiento si el menú es muy largo -->
 <!-- @onclick: colapsa el menú al hacer clic en cualquier opción (en dispositivos móviles) -->
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+<div class="@NavMenuCssClass nav-scrollable" @onclick="@ToggleNavMenu">
     <!-- Elemento de navegación con disposición en columna vertical -->
     <nav class="flex-column">
         <!-- Primera opción de menú: Home -->
@@ -252,6 +252,6 @@
         await AuthService.Logout();
         
         // Redirige a la página de inicio de sesión
-        NavigationManager.NavigateTo("/login");
+        NavigationManager.NavigateTo("/login", true);
     }
 }

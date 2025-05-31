@@ -12,34 +12,45 @@ namespace FrontBlazor.Services
         private readonly HttpClient _httpClient;
         private readonly AuthenticationStateProvider _authStateProvider;
         private readonly ILocalStorageService _localStorage;
+        private const string TokenKey = "authToken";
 
-        public AuthService(HttpClient httpClient, 
-                         AuthenticationStateProvider authStateProvider,
-                         ILocalStorageService localStorage)
+        // Evento que notifica cambios en el estado de autenticación
+        public event Action? OnAuthStateChanged;
+
+        public AuthService(HttpClient httpClient,
+                           AuthenticationStateProvider authStateProvider,
+                           ILocalStorageService localStorage)
         {
             _httpClient = httpClient;
             _authStateProvider = authStateProvider;
             _localStorage = localStorage;
-        }        public async Task<(bool Success, string Message)> Login(LoginRequest request)
+        }
+
+        private void NotifyAuthStateChanged()
+        {
+            OnAuthStateChanged?.Invoke();
+        }
+
+        public async Task<(bool Success, string Message)> Login(LoginRequest request)
         {
             try
             {
-                // Asegurarse de que la ruta sea correcta
                 var response = await _httpClient.PostAsJsonAsync("api/usuario/login", request);
-
-                // Leer el contenido de la respuesta sin importar si fue exitosa o no
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
                     try
                     {
-                        var loginResponse = System.Text.Json.JsonSerializer.Deserialize<LoginResponse>(responseContent);
+                        var loginResponse = JsonSerializer.Deserialize<LoginResponse>(responseContent);
                         if (loginResponse != null && !string.IsNullOrEmpty(loginResponse.Token))
                         {
-                            await _localStorage.SetItemAsync("authToken", loginResponse.Token);
+                            await _localStorage.SetItemAsync(TokenKey, loginResponse.Token);
                             ((CustomAuthStateProvider)_authStateProvider).SetToken(loginResponse.Token);
                             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", loginResponse.Token);
+
+                            NotifyAuthStateChanged();
+
                             return (true, "Login exitoso");
                         }
                     }
@@ -48,8 +59,7 @@ namespace FrontBlazor.Services
                         return (false, $"Error al procesar la respuesta del servidor: {responseContent}");
                     }
                 }
-                
-                // Si llegamos aquí, hubo un error
+
                 return (false, !string.IsNullOrEmpty(responseContent) ? responseContent : "Email o contraseña incorrectos");
             }
             catch (Exception ex)
@@ -60,16 +70,26 @@ namespace FrontBlazor.Services
 
         public async Task Logout()
         {
-            await _localStorage.RemoveItemAsync("authToken");
-            ((CustomAuthStateProvider)_authStateProvider).SetToken("");
-            _httpClient.DefaultRequestHeaders.Authorization = null;
+            try
+            {
+                await _localStorage.RemoveItemAsync(TokenKey);
+                ((CustomAuthStateProvider)_authStateProvider).SetToken(string.Empty);
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+                await _localStorage.ClearAsync();
+
+                NotifyAuthStateChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error durante el logout: {ex.Message}");
+            }
         }
 
         public async Task<bool> InitializeAuthState()
         {
             try
             {
-                var token = await _localStorage.GetItemAsync<string>("authToken");
+                var token = await _localStorage.GetItemAsync<string>(TokenKey);
                 if (!string.IsNullOrEmpty(token))
                 {
                     ((CustomAuthStateProvider)_authStateProvider).SetToken(token);
@@ -82,6 +102,19 @@ namespace FrontBlazor.Services
             {
                 Console.WriteLine($"Error initializing auth state: {ex.Message}");
                 return false;
+            }
+        }
+
+        public async Task<string?> GetToken()
+        {
+            try
+            {
+                return await _localStorage.GetItemAsync<string>(TokenKey);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al obtener el token: {ex.Message}");
+                return null;
             }
         }
     }

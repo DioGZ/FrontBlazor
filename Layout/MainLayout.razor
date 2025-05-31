@@ -1,41 +1,66 @@
-﻿<!-- Indica que esta clase hereda de LayoutComponentBase -->
-<!-- LayoutComponentBase es la clase base para todos los componentes de diseño en Blazor -->
-<!-- Proporciona la propiedad Body para insertar el contenido de la página actual -->
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@inject FrontBlazor.Services.AuthService AuthService
+@inject NavigationManager Navigation
 
-<!-- Contenedor principal que envuelve toda la página -->
 <div class="page">
-    <!-- Panel lateral (sidebar) que contiene el menú de navegación -->
     <div class="sidebar">
-        <!-- Componente NavMenu que define el menú de navegación principal -->
-        <!-- Este componente está definido en NavMenu.razor -->
         <NavMenu />
     </div>
 
-    <!-- Área principal del contenido -->
     <main>
-        <!-- Barra superior con padding horizontal (px-4) -->
-        <div class="top-row px-4">
+        <div class="top-row px-4 d-flex align-items-center justify-content-between">
             <AuthorizeView>
                 <Authorized>
-                    <span class="me-3">Bienvenido, @context.User.Identity?.Name!</span>
+                    <span class="me-3">Bienvenido</span>
                 </Authorized>
             </AuthorizeView>
-            <!-- Enlace "About" que abre la documentación oficial de ASP.NET Core en una nueva pestaña -->
+
+            @if (IsLoggedIn)
+            {
+                <button class="btn btn-outline-danger btn-sm" @onclick="HandleLogout">Cerrar Sesión</button>
+            }
+
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
-        <!-- Contenedor del contenido principal con padding horizontal (px-4) -->
         <article class="content px-4">
-            <!-- @Body es una propiedad especial que renderiza el contenido de la página actual -->
-            <!-- Este es el punto donde se inserta el contenido de cada página que usa este layout -->
             @Body
         </article>
     </main>
 </div>
 
-<!-- Etiqueta que define el estilo de usuario como "Normal" -->
-<!-- Esta es probablemente parte de un sistema de temas o personalización -->
-<!-- No es una característica estándar de Blazor, sino específica de este proyecto -->
 <userStyle>Normal</userStyle>
+
+@code {
+    private bool IsLoggedIn;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckLoginStatusAsync();
+        AuthService.OnAuthStateChanged += AuthStateChanged;
+    }
+
+    private async void AuthStateChanged()
+    {
+        await CheckLoginStatusAsync();
+        StateHasChanged();
+    }
+
+    private async Task CheckLoginStatusAsync()
+    {
+        var token = await AuthService.GetToken();
+        IsLoggedIn = !string.IsNullOrEmpty(token);
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.Logout();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= AuthStateChanged;
+    }
+}
